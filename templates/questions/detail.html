@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ question.title }} - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'questions:list' %}">題目列表</a></li>
+            <li class="breadcrumb-item active">題目詳情</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        {% if question.category %}
+                        <span class="badge bg-secondary me-2">{{ question.category.name }}</span>
+                        {% endif %}
+                        <span class="badge {% if question.difficulty == 'easy' %}bg-success{% elif question.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                            {{ question.get_difficulty_display }}
+                        </span>
+                        {% if question.year %}
+                        <span class="badge bg-info text-dark ms-2">{{ question.year }}年</span>
+                        {% endif %}
+                    </div>
+                    {% if is_privileged %}
+                    <div>
+                        <a href="{% url 'questions:edit' question.pk %}" class="btn btn-sm btn-outline-warning me-1">
+                            <i class="bi bi-pencil me-1"></i>編輯
+                        </a>
+                        <a href="{% url 'questions:delete' question.pk %}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i>停用
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <h4 class="mb-4">{{ question.title }}</h4>
+                    <div class="question-content mb-4 p-3 bg-light rounded">
+                        {{ question.content|linebreaks }}
+                    </div>
+
+                    <h6 class="text-muted mb-3">選項</h6>
+                    <div class="list-group mb-4">
+                        <div class="list-group-item list-group-item-action">
+                            <strong>A.</strong> {{ question.option_a }}
+                        </div>
+                        <div class="list-group-item list-group-item-action">
+                            <strong>B.</strong> {{ question.option_b }}
+                        </div>
+                        <div class="list-group-item list-group-item-action">
+                            <strong>C.</strong> {{ question.option_c }}
+                        </div>
+                        <div class="list-group-item list-group-item-action">
+                            <strong>D.</strong> {{ question.option_d }}
+                        </div>
+                    </div>
+
+                    {% if is_privileged %}
+                    <div class="alert alert-success">
+                        <strong><i class="bi bi-check-circle me-2"></i>正確答案：{{ question.correct_answer }}</strong>
+                    </div>
+                    {% if question.hint or question.solution_idea or question.explanation %}
+                    <div class="accordion" id="explanationAccordion">
+                        {% if question.hint %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHint">
+                                    <i class="bi bi-lightbulb me-2"></i>提示
+                                </button>
+                            </h2>
+                            <div id="collapseHint" class="accordion-collapse collapse" data-bs-parent="#explanationAccordion">
+                                <div class="accordion-body">{{ question.hint|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if question.solution_idea %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSolution">
+                                    <i class="bi bi-cpu me-2"></i>解題思路
+                                </button>
+                            </h2>
+                            <div id="collapseSolution" class="accordion-collapse collapse" data-bs-parent="#explanationAccordion">
+                                <div class="accordion-body">{{ question.solution_idea|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if question.explanation %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExplanation">
+                                    <i class="bi bi-book me-2"></i>詳細解說
+                                </button>
+                            </h2>
+                            <div id="collapseExplanation" class="accordion-collapse collapse" data-bs-parent="#explanationAccordion">
+                                <div class="accordion-body">{{ question.explanation|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <div class="mt-4 d-flex gap-2">
+                        <a href="{% url 'questions:list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>返回列表
+                        </a>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'practice:start' %}" class="btn btn-primary">
+                            <i class="bi bi-pencil-square me-1"></i>開始練習
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

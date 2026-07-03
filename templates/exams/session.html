@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ exam.title }} - 作答中{% endblock %}
+
+{% block extra_css %}
+<style>
+.exam-sidebar { position: sticky; top: 80px; }
+.q-nav-btn { width: 36px; height: 36px; padding: 0; font-size: 0.8rem; }
+.q-nav-btn.answered { background-color: #198754; color: white; border-color: #198754; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row g-3">
+        <!-- Sidebar -->
+        <div class="col-lg-2">
+            <div class="exam-sidebar">
+                <!-- Timer -->
+                <div class="card shadow-sm mb-3 text-center">
+                    <div class="card-body py-2">
+                        <small class="text-muted">剩餘時間</small>
+                        <h3 class="mb-0 text-danger fw-bold" id="timer">--:--</h3>
+                    </div>
+                </div>
+
+                <!-- Question Navigation -->
+                <div class="card shadow-sm">
+                    <div class="card-header py-2 bg-light">
+                        <small class="fw-semibold">題目導覽</small>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for eq in exam_questions %}
+                            <a href="#q{{ eq.order }}"
+                               class="btn btn-outline-secondary q-nav-btn {% if answers|default_if_none:'' %}{% for aid, a in answers.items %}{% if a.question_id == eq.question_id and a.selected_answer %}answered{% endif %}{% endfor %}{% endif %}"
+                               id="nav-{{ eq.order }}">
+                                {{ eq.order }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-3">
+                    <form method="post" action="{% url 'exams:submit' session.pk %}" id="submitForm">
+                        {% csrf_token %}
+                        <button type="button" class="btn btn-danger w-100" onclick="confirmSubmit()">
+                            <i class="bi bi-send-check me-1"></i>交卷
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions -->
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">{{ exam.title }}</h4>
+                <span class="text-muted">共 {{ exam.question_count }} 題</span>
+            </div>
+
+            {% for eq in exam_questions %}
+            <div class="card shadow-sm mb-4" id="q{{ eq.order }}">
+                <div class="card-header bg-light d-flex justify-content-between">
+                    <span><strong>第 {{ eq.order }} 題</strong>（{{ eq.score }} 分）</span>
+                    <div class="d-flex gap-2">
+                        {% if eq.question.category %}
+                        <span class="badge bg-secondary">{{ eq.question.category.name }}</span>
+                        {% endif %}
+                        <span class="badge {% if eq.question.difficulty == 'easy' %}bg-success{% elif eq.question.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                            {{ eq.question.get_difficulty_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <h6 class="mb-3">{{ eq.question.title }}</h6>
+                    <div class="bg-light p-3 rounded mb-4 small">{{ eq.question.content|linebreaks }}</div>
+
+                    <div class="options-group" data-question-id="{{ eq.question.pk }}" data-session="{{ session.pk }}">
+                        {% with current_answer=answers|default_if_none:'' %}
+                        {% for letter, text in eq.question.get_options %}
+                        <div class="mb-2">
+                            <input type="radio" class="btn-check exam-answer"
+                                   name="answer_{{ eq.question.pk }}"
+                                   id="q{{ eq.order }}_{{ letter }}"
+                                   value="{{ letter }}"
+                                   data-question-id="{{ eq.question.pk }}"
+                                   data-session-pk="{{ session.pk }}"
+                                   data-save-url="{% url 'exams:save_answer' session.pk %}"
+                                   data-nav-id="nav-{{ eq.order }}">
+                            <label class="btn btn-outline-secondary w-100 text-start"
+                                   for="q{{ eq.order }}_{{ letter }}">
+                                <strong>{{ letter }}.</strong> {{ text }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="d-flex justify-content-end mb-5">
+                <button type="button" class="btn btn-danger btn-lg" onclick="confirmSubmit()">
+                    <i class="bi bi-send-check me-2"></i>交卷
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const timeRemaining = {{ time_remaining|default:1800 }};
+const sessionPk = {{ session.pk }};
+const submitUrl = "{% url 'exams:submit' session.pk %}";
+const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)[1];
+</script>
+{% load static %}
+<script src="{% static 'js/exam_timer.js' %}"></script>
+{% endblock %}

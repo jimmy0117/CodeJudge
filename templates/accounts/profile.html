@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}個人資料 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>個人資料</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-sm-4 text-muted">使用者名稱</div>
+                        <div class="col-sm-8 fw-bold">{{ user.username }}</div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-sm-4 text-muted">角色</div>
+                        <div class="col-sm-8">
+                            <span class="badge {% if user.profile.role == 'teacher' %}bg-primary{% elif user.profile.role == 'admin' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ user.profile.get_role_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <hr>
+                    <h5 class="mb-3">更新個人資料</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>儲存變更
+                            </button>
+                            <a href="{% url 'accounts:change_password' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-key me-1"></i>修改密碼
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

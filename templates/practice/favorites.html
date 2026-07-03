@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}收藏題目 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-star-fill me-2 text-warning"></i>收藏題目</h2>
+        {% if fav_questions %}
+        <a href="{% url 'practice:start' %}" class="btn btn-warning">
+            <i class="bi bi-play-fill me-1"></i>練習收藏題目
+        </a>
+        {% endif %}
+    </div>
+
+    {% if fav_questions %}
+    <div class="row g-3">
+        {% for fav in fav_questions %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">
+                            <a href="{% url 'questions:detail' fav.question.pk %}" class="text-decoration-none">
+                                {{ fav.question.title }}
+                            </a>
+                        </h6>
+                        <div class="d-flex gap-2 mt-1">
+                            {% if fav.question.category %}
+                            <span class="badge bg-secondary">{{ fav.question.category.name }}</span>
+                            {% endif %}
+                            <span class="badge {% if fav.question.difficulty == 'easy' %}bg-success{% elif fav.question.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ fav.question.get_difficulty_display }}
+                            </span>
+                            <span class="text-muted small">收藏於 {{ fav.created_at|date:"Y/m/d" }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'questions:detail' fav.question.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <button class="btn btn-sm btn-warning toggle-fav"
+                                data-url="{% url 'practice:toggle_favorite' fav.question.pk %}"
+                                data-id="{{ fav.question.pk }}">
+                            <i class="bi bi-star-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-star display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">尚無收藏題目</h4>
+        <a href="{% url 'questions:list' %}" class="btn btn-primary mt-3">瀏覽題目</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

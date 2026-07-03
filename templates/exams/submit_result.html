@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}考試結果 - {{ session.exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-4">
+                <i class="bi bi-trophy display-1 text-warning"></i>
+                <h2 class="fw-bold mt-3">{{ session.exam.title }}</h2>
+                <p class="text-muted">交卷時間：{{ session.submitted_at|date:"Y/m/d H:i" }}</p>
+            </div>
+
+            {% if session.exam.show_score %}
+            <div class="card shadow-sm mb-4 border-primary">
+                <div class="card-body text-center py-4">
+                    <h1 class="display-3 fw-bold text-primary">{{ session.score }}</h1>
+                    <p class="text-muted mb-0">滿分 {{ session.exam.total_score }} 分 |
+                        {{ session.score|floatformat:0 }} / {{ session.exam.total_score }} =
+                        {% widthratio session.score session.exam.total_score 100 %}%
+                    </p>
+                    <div class="progress mt-3" style="height: 20px;">
+                        <div class="progress-bar {% if session.score >= session.exam.total_score|add:0 %}bg-success{% else %}bg-primary{% endif %}"
+                             style="width: {% widthratio session.score session.exam.total_score 100 %}%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Answer Review -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">答題明細</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for answer in answers %}
+                    {% with eq=exam_questions|default_if_none:'' %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <p class="mb-1 fw-semibold">{{ forloop.counter }}. {{ answer.question.title }}</p>
+                                <div class="d-flex gap-2">
+                                    {% if answer.selected_answer %}
+                                    <small class="text-muted">你的答案：<strong>{{ answer.selected_answer }}</strong></small>
+                                    {% else %}
+                                    <small class="text-muted">未作答</small>
+                                    {% endif %}
+                                    <small class="text-success">正確答案：<strong>{{ answer.question.correct_answer }}</strong></small>
+                                </div>
+                                {% if session.exam.show_explanation %}
+                                    {% if answer.question.explanation %}
+                                    <div class="mt-2 p-2 bg-light rounded small">
+                                        <strong>解說：</strong>{{ answer.question.explanation|truncatechars:200 }}
+                                    </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="ms-3">
+                                {% if answer.is_correct %}
+                                <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                {% elif answer.selected_answer %}
+                                <i class="bi bi-x-circle-fill text-danger fs-4"></i>
+                                {% else %}
+                                <i class="bi bi-dash-circle text-secondary fs-4"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <a href="{% url 'exams:list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>返回考卷列表
+                </a>
+                <a href="{% url 'dashboard:index' %}" class="btn btn-primary">
+                    <i class="bi bi-bar-chart me-1"></i>查看學習統計
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

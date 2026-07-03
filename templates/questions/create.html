@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ action }}題目 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'questions:list' %}">題目列表</a></li>
+            <li class="breadcrumb-item active">{{ action }}題目</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">
+                <i class="bi bi-{% if action == '新增' %}plus-circle{% else %}pencil{% endif %} me-2"></i>
+                {{ action }}題目
+            </h4>
+        </div>
+        <div class="card-body p-4">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        {{ form.title|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.category|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.content|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.option_a|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.option_b|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.option_c|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.option_d|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.correct_answer|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.difficulty|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.year|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.tags_input|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.hint|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.solution_idea|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.explanation|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.is_active|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>儲存題目
+                    </button>
+                    <a href="{% url 'questions:list' %}" class="btn btn-outline-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

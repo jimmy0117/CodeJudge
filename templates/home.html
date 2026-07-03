@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+
+{% block title %}APCS 選擇題練習平台 - 首頁{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="bi bi-code-square me-3"></i>APCS 選擇題練習平台
+        </h1>
+        <p class="lead mb-4">
+            系統化練習 APCS 選擇題、追蹤學習進度、分析弱點，讓備考更有效率！
+        </p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'practice:start' %}" class="btn btn-light btn-lg me-3">
+                <i class="bi bi-pencil-square me-2"></i>開始練習
+            </a>
+            <a href="{% url 'dashboard:index' %}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-bar-chart me-2"></i>查看統計
+            </a>
+        {% else %}
+            <a href="{% url 'accounts:register' %}" class="btn btn-light btn-lg me-3">
+                <i class="bi bi-person-plus me-2"></i>免費註冊
+            </a>
+            <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>登入
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-5 fw-bold">平台功能</h2>
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="card-body">
+                    <div class="display-4 text-primary mb-3">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">題目練習</h5>
+                    <p class="card-text text-muted">
+                        豐富的 APCS 選擇題庫，支援自由練習、隨機練習和弱點練習模式。
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="card-body">
+                    <div class="display-4 text-success mb-3">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">考卷測驗</h5>
+                    <p class="card-text text-muted">
+                        教師可建立模擬考卷，設定時間限制，學生作答後立即查看成績。
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="card-body">
+                    <div class="display-4 text-warning mb-3">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">班級管理</h5>
+                    <p class="card-text text-muted">
+                        教師建立班級，指派考卷，追蹤學生學習進度與成績。
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 border-0 shadow-sm text-center p-4">
+                <div class="card-body">
+                    <div class="display-4 text-info mb-3">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">學習統計</h5>
+                    <p class="card-text text-muted">
+                        個人化學習分析，識別弱點分類，間隔複習錯題，科學備考。
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Section -->
+{% if user.is_authenticated %}
+<div class="bg-light py-5">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-4">快速入口</h2>
+        <div class="row g-3 justify-content-center">
+            <div class="col-auto">
+                <a href="{% url 'practice:start' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-play-circle me-2"></i>開始練習
+                </a>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'practice:wrong_list' %}" class="btn btn-danger btn-lg">
+                    <i class="bi bi-x-circle me-2"></i>複習錯題
+                </a>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'exams:join' %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-clipboard-check me-2"></i>加入考卷
+                </a>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'classes:join' %}" class="btn btn-warning btn-lg">
+                    <i class="bi bi-people me-2"></i>加入班級
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

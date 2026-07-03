@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}我的班級 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>
+            {% if is_privileged %}我的班級{% else %}已加入的班級{% endif %}
+        </h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'classes:join' %}" class="btn btn-outline-primary">
+                <i class="bi bi-plus me-1"></i>加入班級
+            </a>
+            {% if is_privileged %}
+            <a href="{% url 'classes:create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>建立班級
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if classes %}
+    <div class="row g-3">
+        {% for classroom in classes %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <span class="fw-bold">{{ classroom.name }}</span>
+                    <span class="badge bg-primary">{{ classroom.class_code }}</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">{{ classroom.description|default:'無描述' }}</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-people me-1"></i>{{ classroom.student_count }} 位學生
+                    </p>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <a href="{% url 'classes:detail' classroom.pk %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-arrow-right me-1"></i>進入
+                    </a>
+                    {% if is_privileged %}
+                    <a href="{% url 'classes:students' classroom.pk %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-people me-1"></i>學生
+                    </a>
+                    <a href="{% url 'classes:results' classroom.pk %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-bar-chart me-1"></i>成績
+                    </a>
+                    {% else %}
+                    <a href="{% url 'classes:leave' classroom.pk %}" class="btn btn-sm btn-outline-danger">退出</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-people display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">
+            {% if is_privileged %}尚未建立班級{% else %}尚未加入任何班級{% endif %}
+        </h4>
+        <a href="{% url 'classes:join' %}" class="btn btn-primary mt-3">加入班級</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

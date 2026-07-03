@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}班級統計 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="fw-bold mb-4"><i class="bi bi-people me-2"></i>班級統計</h2>
+    {% if my_classes %}
+    <div class="row g-3">
+        {% for classroom in my_classes %}
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header">{{ classroom.name }}</div>
+                <div class="card-body">
+                    <p class="text-muted">學生數：{{ classroom.student_count }}</p>
+                    <a href="{% url 'classes:results' classroom.pk %}" class="btn btn-sm btn-primary">查看成績</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">尚無班級</p>
+    {% endif %}
+</div>
+{% endblock %}

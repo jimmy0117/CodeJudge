@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}弱點分析 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-graph-down me-2 text-danger"></i>弱點分析</h2>
+        <a href="{% url 'practice:start' %}" class="btn btn-primary">
+            <i class="bi bi-play-fill me-1"></i>針對弱點練習
+        </a>
+    </div>
+
+    {% if weakness %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">正確率最低的分類（答題 ≥ 3 題）</h5>
+        </div>
+        <div class="card-body">
+            {% for w in weakness %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <div>
+                        <span class="fw-bold fs-5">{{ w.name }}</span>
+                        <span class="badge bg-danger ms-2">需要加強</span>
+                    </div>
+                    <span class="fw-bold {% if w.pct >= 60 %}text-success{% elif w.pct >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ w.pct }}%
+                    </span>
+                </div>
+                <div class="progress mb-1" style="height: 20px;">
+                    <div class="progress-bar {% if w.pct >= 60 %}bg-success{% elif w.pct >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                         style="width: {{ w.pct }}%">
+                        {{ w.pct }}%
+                    </div>
+                </div>
+                <small class="text-muted">共答 {{ w.total }} 題，答對 {{ w.correct }} 題</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>
+        建議針對正確率低於 60% 的分類重點練習，可使用「弱點練習」模式。
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-graph-up display-1 text-success"></i>
+        <h4 class="mt-3 text-muted">
+            {% if total == 0 %}尚無足夠練習紀錄{% else %}目前沒有明顯弱點！繼續保持{% endif %}
+        </h4>
+        <a href="{% url 'practice:start' %}" class="btn btn-primary mt-3">繼續練習</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

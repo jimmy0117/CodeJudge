@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}考卷列表 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>
+            {% if is_privileged %}我的考卷{% else %}我的考試{% endif %}
+        </h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'exams:join' %}" class="btn btn-outline-primary">
+                <i class="bi bi-plus me-1"></i>加入考卷
+            </a>
+            {% if is_privileged %}
+            <a href="{% url 'exams:create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>建立考卷
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if exams %}
+    <div class="row g-3">
+        {% for exam in exams %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <span class="fw-bold">{{ exam.title }}</span>
+                    <span class="badge {% if exam.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                        {% if exam.is_active %}啟用{% else %}停用{% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-hash me-1"></i>代號：<strong class="text-dark">{{ exam.code }}</strong>
+                    </p>
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-clock me-1"></i>時間限制：{{ exam.time_limit }} 分鐘
+                    </p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-list-ol me-1"></i>共 {{ exam.question_count }} 題，
+                        滿分 {{ exam.total_score }} 分
+                    </p>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    {% if is_privileged %}
+                    <a href="{% url 'exams:detail' exam.pk %}" class="btn btn-sm btn-primary">管理</a>
+                    <a href="{% url 'exams:results' exam.pk %}" class="btn btn-sm btn-outline-secondary">成績</a>
+                    {% else %}
+                    <a href="{% url 'exams:start' exam.pk %}" class="btn btn-sm btn-primary">作答</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-clipboard display-1 text-muted"></i>
+        <h4 class="mt-3 text-muted">
+            {% if is_privileged %}尚未建立考卷{% else %}尚未加入任何考卷{% endif %}
+        </h4>
+        <a href="{% url 'exams:join' %}" class="btn btn-primary mt-3">加入考卷</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

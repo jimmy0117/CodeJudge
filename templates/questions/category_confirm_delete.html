@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}刪除分類 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>確認刪除分類</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <p class="lead">確定要刪除分類「{{ category.name }}」嗎？</p>
+                    <p class="small text-muted">屬於此分類的題目將變為無分類，不會被刪除。</p>
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">確認刪除</button>
+                        </form>
+                        <a href="{% url 'questions:category_list' %}" class="btn btn-outline-secondary">取消</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

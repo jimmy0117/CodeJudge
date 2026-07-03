@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}練習題目 {{ index }}/{{ total }} - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Progress Bar -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small">題目 {{ index }} / {{ total }}</span>
+                <span class="text-muted small">
+                    {% if question.category %}{{ question.category.name }}{% endif %}
+                </span>
+            </div>
+            <div class="progress mb-4" style="height: 8px;">
+                <div class="progress-bar" style="width: {% widthratio index total 100 %}%"></div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex gap-2">
+                    <span class="badge {% if question.difficulty == 'easy' %}bg-success{% elif question.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                        {{ question.get_difficulty_display }}
+                    </span>
+                    {% if question.year %}
+                    <span class="badge bg-secondary">{{ question.year }}年</span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <h5 class="mb-3">{{ question.title }}</h5>
+                    <div class="bg-light p-3 rounded mb-4">
+                        {{ question.content|linebreaks }}
+                    </div>
+
+                    <form method="post" id="answerForm">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <p class="fw-semibold mb-3">請選擇答案：</p>
+                            {% for letter, text in question.get_options %}
+                            <div class="option-item mb-2">
+                                <input type="radio" class="btn-check" name="answer" id="option{{ letter }}" value="{{ letter }}" required>
+                                <label class="btn btn-outline-secondary w-100 text-start option-label" for="option{{ letter }}">
+                                    <strong>{{ letter }}.</strong> {{ text }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Confidence -->
+                        <div class="mb-4">
+                            <p class="fw-semibold mb-2">信心程度：</p>
+                            <div class="d-flex gap-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="confidence" id="sure" value="sure">
+                                    <label class="form-check-label confidence-label text-success" for="sure">
+                                        <i class="bi bi-emoji-smile me-1"></i>很確定
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="confidence" id="unsure" value="unsure">
+                                    <label class="form-check-label confidence-label text-warning" for="unsure">
+                                        <i class="bi bi-emoji-neutral me-1"></i>不太確定
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="confidence" id="guess" value="guess">
+                                    <label class="form-check-label confidence-label text-danger" for="guess">
+                                        <i class="bi bi-dice-3 me-1"></i>猜的
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-send me-2"></i>送出答案
+                            </button>
+                            <a href="{% url 'practice:start' %}" class="btn btn-outline-secondary btn-lg">結束練習</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ classroom.name }} - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{{ classroom.name }}</h2>
+            <span class="badge bg-primary fs-6">代號：{{ classroom.class_code }}</span>
+        </div>
+        {% if is_owner %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'classes:students' classroom.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-people me-1"></i>學生管理
+            </a>
+            <a href="{% url 'classes:assign_exam' classroom.pk %}" class="btn btn-outline-success">
+                <i class="bi bi-clipboard-plus me-1"></i>指派考卷
+            </a>
+            <a href="{% url 'classes:results' classroom.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-bar-chart me-1"></i>成績統計
+            </a>
+        </div>
+        {% elif is_enrolled %}
+        <a href="{% url 'classes:leave' classroom.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-box-arrow-right me-1"></i>退出班級
+        </a>
+        {% endif %}
+    </div>
+
+    {% if classroom.description %}
+    <p class="text-muted mb-4">{{ classroom.description }}</p>
+    {% endif %}
+
+    <h4 class="fw-bold mb-3">指派考卷</h4>
+    {% if assignments %}
+    <div class="row g-3">
+        {% for assignment in assignments %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 {% if assignment.is_required %}border-primary{% endif %}">
+                <div class="card-body">
+                    <h6 class="card-title">{{ assignment.exam.title }}</h6>
+                    <p class="text-muted small mb-1">
+                        代號：{{ assignment.exam.code }}
+                    </p>
+                    {% if assignment.is_required %}
+                    <span class="badge bg-primary">必做</span>
+                    {% endif %}
+                    {% if assignment.end_time %}
+                    <p class="text-muted small mt-1">截止：{{ assignment.end_time|date:"Y/m/d H:i" }}</p>
+                    {% endif %}
+                </div>
+                {% if not is_owner %}
+                <div class="card-footer">
+                    <a href="{% url 'exams:start' assignment.exam.pk %}" class="btn btn-sm btn-primary w-100">
+                        <i class="bi bi-pencil me-1"></i>開始作答
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+        <i class="bi bi-clipboard display-3"></i>
+        <p class="mt-2">尚未指派考卷</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

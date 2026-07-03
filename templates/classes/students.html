@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}班級學生 - {{ classroom.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">{{ classroom.name }} - 學生名單</h2>
+        <a href="{% url 'classes:detail' classroom.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>返回
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">共 {{ enrollments.count }} 位學生</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>使用者名稱</th>
+                        <th>姓名</th>
+                        <th>加入時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in enrollments %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ enrollment.user.username }}</td>
+                        <td>{{ enrollment.user.get_full_name|default:'-' }}</td>
+                        <td>{{ enrollment.joined_at|date:"Y/m/d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">尚無學生</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

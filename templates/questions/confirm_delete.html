@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}停用題目 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>確認停用題目</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <p class="lead">確定要停用這道題目嗎？</p>
+                    <p class="text-muted">「{{ question.title }}」</p>
+                    <p class="small text-muted">停用後題目將不再顯示在列表中，但不會永久刪除。</p>
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i>確認停用
+                            </button>
+                        </form>
+                        <a href="{% url 'questions:detail' question.pk %}" class="btn btn-outline-secondary">取消</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

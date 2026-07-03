@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}作答結果 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Result Header -->
+            <div class="alert {% if is_correct %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center mb-4">
+                <i class="bi {% if is_correct %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %} display-6 me-3"></i>
+                <div>
+                    <h4 class="alert-heading mb-1">
+                        {% if is_correct %}答對了！{% else %}答錯了！{% endif %}
+                    </h4>
+                    <p class="mb-0 small">
+                        你選擇了 <strong>{{ selected }}</strong>，
+                        正確答案是 <strong>{{ question.correct_answer }}</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Question Review -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light d-flex justify-content-between">
+                    <span>題目 {{ index }} / {{ total }}</span>
+                    <button class="btn btn-sm {% if is_favorited %}btn-warning{% else %}btn-outline-warning{% endif %}"
+                            id="favoriteBtn" data-question-id="{{ question.pk }}"
+                            data-url="{% url 'practice:toggle_favorite' question.pk %}">
+                        <i class="bi {% if is_favorited %}bi-star-fill{% else %}bi-star{% endif %} me-1"></i>
+                        <span id="favBtnText">{% if is_favorited %}已收藏{% else %}收藏{% endif %}</span>
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <h5 class="mb-3">{{ question.title }}</h5>
+                    <div class="bg-light p-3 rounded mb-4">{{ question.content|linebreaks }}</div>
+
+                    <!-- Options with highlighting -->
+                    <div class="list-group mb-4">
+                        {% for letter, text in question.get_options %}
+                        <div class="list-group-item
+                            {% if letter == question.correct_answer %}list-group-item-success{% elif letter == selected and not is_correct %}list-group-item-danger{% endif %}">
+                            <strong>{{ letter }}.</strong> {{ text }}
+                            {% if letter == question.correct_answer %}
+                                <i class="bi bi-check-circle-fill text-success ms-2"></i>
+                            {% elif letter == selected and not is_correct %}
+                                <i class="bi bi-x-circle-fill text-danger ms-2"></i>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Explanation Accordion -->
+                    {% if question.hint or question.solution_idea or question.explanation %}
+                    <div class="accordion mb-4" id="explanationAccordion">
+                        {% if question.hint %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button {% if is_correct %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHint">
+                                    <i class="bi bi-lightbulb me-2 text-warning"></i>提示
+                                </button>
+                            </h2>
+                            <div id="collapseHint" class="accordion-collapse collapse {% if not is_correct %}show{% endif %}">
+                                <div class="accordion-body">{{ question.hint|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if question.solution_idea %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSolution">
+                                    <i class="bi bi-cpu me-2 text-info"></i>解題思路
+                                </button>
+                            </h2>
+                            <div id="collapseSolution" class="accordion-collapse collapse">
+                                <div class="accordion-body">{{ question.solution_idea|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if question.explanation %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExplanation">
+                                    <i class="bi bi-book me-2 text-primary"></i>詳細解說
+                                </button>
+                            </h2>
+                            <div id="collapseExplanation" class="accordion-collapse collapse">
+                                <div class="accordion-body">{{ question.explanation|linebreaks }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Note Section -->
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h6><i class="bi bi-journal-text me-2"></i>我的筆記</h6>
+                            <form method="post" action="{% url 'practice:note_edit' question.pk %}">
+                                {% csrf_token %}
+                                <textarea name="content" class="form-control mb-2" rows="3"
+                                    placeholder="記錄解題思路、重要觀念...">{{ note.content|default:'' }}</textarea>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-save me-1"></i>儲存筆記
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="d-flex gap-2 justify-content-between">
+                <a href="{% url 'practice:start' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-stop-fill me-1"></i>結束練習
+                </a>
+                {% if has_next %}
+                <a href="{% url 'practice:next' %}" class="btn btn-primary btn-lg">
+                    下一題 <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+                {% else %}
+                <a href="{% url 'practice:start' %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-trophy me-2"></i>完成練習！
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('favoriteBtn').addEventListener('click', function() {
+    const btn = this;
+    const url = btn.dataset.url;
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)[1],
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    })
+    .then(r => r.json())
+    .then(data => {
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('#favBtnText');
+        if (data.status === 'added') {
+            btn.classList.replace('btn-outline-warning', 'btn-warning');
+            icon.classList.replace('bi-star', 'bi-star-fill');
+            text.textContent = '已收藏';
+        } else {
+            btn.classList.replace('btn-warning', 'btn-outline-warning');
+            icon.classList.replace('bi-star-fill', 'bi-star');
+            text.textContent = '收藏';
+        }
+    });
+});
+</script>
+{% endblock %}

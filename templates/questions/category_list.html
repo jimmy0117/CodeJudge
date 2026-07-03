@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}分類管理 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0"><i class="bi bi-tags me-2"></i>分類管理</h2>
+        {% if user.is_authenticated and user.profile.is_teacher_or_admin %}
+        <a href="{% url 'questions:category_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>新增分類
+        </a>
+        {% endif %}
+    </div>
+    <div class="row g-3">
+        {% for category in categories %}
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ category.name }}</h5>
+                    <p class="card-text text-muted small">{{ category.description|default:'無描述' }}</p>
+                    <p class="text-muted small">共 {{ category.questions.filter.count }} 題</p>
+                </div>
+                {% if user.is_authenticated and user.profile.is_teacher_or_admin %}
+                <div class="card-footer bg-transparent d-flex gap-2">
+                    <a href="{% url 'questions:category_edit' category.pk %}" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-pencil"></i> 編輯
+                    </a>
+                    <a href="{% url 'questions:category_delete' category.pk %}" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> 刪除
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-tags display-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">尚無分類</h5>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
