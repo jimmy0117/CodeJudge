@@ -23,6 +23,7 @@ class Exam(models.Model):
     is_active = models.BooleanField(default=True, verbose_name='啟用')
     show_score = models.BooleanField(default=True, verbose_name='顯示分數')
     show_explanation = models.BooleanField(default=False, verbose_name='顯示詳解')
+    anti_cheat = models.BooleanField(default=False, verbose_name='啟用防作弊（切換視窗偵測）')
     start_time = models.DateTimeField(null=True, blank=True, verbose_name='開始時間')
     end_time = models.DateTimeField(null=True, blank=True, verbose_name='結束時間')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='建立時間')
@@ -71,6 +72,7 @@ class ExamSession(models.Model):
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='交卷時間')
     score = models.IntegerField(default=0, verbose_name='分數')
     is_submitted = models.BooleanField(default=False, verbose_name='已交卷')
+    cheat_count = models.IntegerField(default=0, verbose_name='切換視窗次數')
 
     class Meta:
         verbose_name = '考試紀錄'

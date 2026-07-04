@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, F
 from .models import Exam, ExamQuestion, ExamSession, ExamAnswer
 from .forms import ExamForm, ExamJoinForm
 from questions.models import Question, Category
@@ -182,6 +182,18 @@ def exam_session(request, pk):
 
 
 @login_required
+def record_cheat(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    session = get_object_or_404(ExamSession, pk=pk, user=request.user)
+    if session.is_submitted:
+        return JsonResponse({'error': '已交卷'}, status=400)
+    ExamSession.objects.filter(pk=pk).update(cheat_count=F('cheat_count') + 1)
+    session.refresh_from_db()
+    return JsonResponse({'status': 'recorded', 'count': session.cheat_count})
+
+
+@login_required
 def exam_save_answer(request, pk):
     if request.method == 'POST':
         session = get_object_or_404(ExamSession, pk=pk, user=request.user)
@@ -256,16 +268,22 @@ def export_results_csv(request, pk):
     response['Content-Disposition'] = f'attachment; filename="exam_{exam.code}_results.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['使用者名稱', '姓名', '分數', '滿分', '百分比', '交卷時間'])
+    headers = ['使用者名稱', '姓名', '分數', '滿分', '百分比', '交卷時間']
+    if exam.anti_cheat:
+        headers.append('切換視窗次數')
+    writer.writerow(headers)
     total = exam.total_score()
     for s in sessions:
         pct = round(s.score / total * 100, 1) if total else 0
-        writer.writerow([
+        row = [
             s.user.username,
             s.user.get_full_name() or s.user.username,
             s.score,
             total,
             f'{pct}%',
             s.submitted_at.strftime('%Y-%m-%d %H:%M') if s.submitted_at else '',
-        ])
+        ]
+        if exam.anti_cheat:
+            row.append(s.cheat_count)
+        writer.writerow(row)
     return response

@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:pk>/start/', views.exam_start, name='start'),
     path('session/<int:pk>/', views.exam_session, name='session'),
     path('session/<int:pk>/save/', views.exam_save_answer, name='save_answer'),
+    path('session/<int:pk>/cheat/', views.record_cheat, name='record_cheat'),
     path('session/<int:pk>/submit/', views.exam_submit, name='submit'),
     path('session/<int:pk>/result/', views.exam_session_result, name='session_result'),
 ]

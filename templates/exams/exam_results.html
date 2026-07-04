@@ -33,6 +33,11 @@
                         <th class="text-center">分數</th>
                         <th class="text-center">百分比</th>
                         <th>交卷時間</th>
+                        {% if exam.anti_cheat %}
+                        <th class="text-center text-danger">
+                            <i class="bi bi-eye me-1"></i>切換視窗
+                        </th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -58,6 +63,17 @@
                             {% widthratio session.score exam.total_score 100 %}%
                         </td>
                         <td>{{ session.submitted_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                        {% if exam.anti_cheat %}
+                        <td class="text-center">
+                            {% if session.cheat_count > 0 %}
+                            <span class="badge {% if session.cheat_count >= 3 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                {{ session.cheat_count }} 次
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

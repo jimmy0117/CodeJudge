@@ -9,6 +9,7 @@ class ExamForm(forms.ModelForm):
         fields = (
             'title', 'description', 'time_limit',
             'is_active', 'show_score', 'show_explanation',
+            'anti_cheat',
             'start_time', 'end_time'
         )
         labels = {
@@ -18,6 +19,7 @@ class ExamForm(forms.ModelForm):
             'is_active': '啟用',
             'show_score': '交卷後顯示分數',
             'show_explanation': '交卷後顯示詳解',
+            'anti_cheat': '啟用防作弊（偵測切換視窗／分頁）',
             'start_time': '開始時間',
             'end_time': '結束時間',
         }

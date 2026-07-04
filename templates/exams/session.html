@@ -113,11 +113,46 @@
 
 {% block extra_js %}
 <script>
-const timeRemaining = {{ time_remaining|default:1800 }};
-const sessionPk = {{ session.pk }};
-const submitUrl = "{% url 'exams:submit' session.pk %}";
-const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)[1];
+const timeRemaining   = {{ time_remaining|default:1800 }};
+const sessionPk       = {{ session.pk }};
+const submitUrl       = "{% url 'exams:submit' session.pk %}";
+const antiCheat       = {{ exam.anti_cheat|yesno:"true,false" }};
+const recordCheatUrl  = "{% url 'exams:record_cheat' session.pk %}";
+const maxWarnings     = 3;
 </script>
 {% load static %}
 <script src="{% static 'js/exam_timer.js' %}"></script>
 {% endblock %}
+
+{% if exam.anti_cheat %}
+<!-- Anti-cheat Warning Modal -->
+<div class="modal fade" id="antiCheatModal" tabindex="-1"
+     data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger border-2">
+            <div class="modal-header bg-danger text-white py-2">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>切換視窗警告
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="fs-1 mb-3">⚠️</div>
+                <h5 class="fw-bold">系統偵測到您切換了視窗或分頁</h5>
+                <p class="text-muted mb-4">此行為已被記錄，請專注於考卷作答。</p>
+                <div class="alert alert-warning fw-semibold mb-3">
+                    本次警告：第 <span id="cheatCountDisplay" class="text-danger fs-5">0</span>
+                    次 / 共 <span id="cheatMaxDisplay" class="text-danger fs-5">3</span> 次
+                </div>
+                <p id="cheatFinalWarning" class="text-danger fw-bold d-none mt-2">
+                    ⛔ 警告已達上限，系統將於 3 秒後自動交卷…
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center" id="cheatModalFooter">
+                <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-return-left me-1"></i>我知道了，返回作答
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

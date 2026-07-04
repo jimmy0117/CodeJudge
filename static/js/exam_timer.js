@@ -128,4 +128,62 @@
         localStorage.removeItem(key);
     });
 
+    // ── Anti-cheat ────────────────────────────────────────────────────────────
+    if (typeof antiCheat !== 'undefined' && antiCheat) {
+        let cheatCount = 0;
+        const MAX_WARNINGS = typeof maxWarnings !== 'undefined' ? maxWarnings : 3;
+        let cooldown = false;   // prevent double-firing from blur + visibilitychange
+
+        function triggerAntiCheat() {
+            if (cooldown) return;
+            cooldown = true;
+            setTimeout(() => { cooldown = false; }, 800);
+
+            cheatCount++;
+
+            // Update modal counters
+            const countEl = document.getElementById('cheatCountDisplay');
+            const maxEl   = document.getElementById('cheatMaxDisplay');
+            if (countEl) countEl.textContent = cheatCount;
+            if (maxEl)   maxEl.textContent   = MAX_WARNINGS;
+
+            // Show modal
+            const modalEl = document.getElementById('antiCheatModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl)
+                           || new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+                modal.show();
+            }
+
+            // Record on server (fire-and-forget)
+            if (typeof recordCheatUrl !== 'undefined') {
+                fetch(recordCheatUrl, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                }).catch(() => {});
+            }
+
+            // Auto-submit when max reached
+            if (cheatCount >= MAX_WARNINGS) {
+                document.getElementById('cheatFinalWarning')?.classList.remove('d-none');
+                document.getElementById('cheatModalFooter')?.classList.add('d-none');
+                setTimeout(() => {
+                    const storageKey = 'exam_answers_' + (typeof sessionPk !== 'undefined' ? sessionPk : '');
+                    localStorage.removeItem(storageKey);
+                    document.getElementById('submitForm')?.submit();
+                }, 3000);
+            }
+        }
+
+        // Tab switch (visibility API)
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) triggerAntiCheat();
+        });
+
+        // Window blur: catches switching to another app without hiding the tab
+        window.addEventListener('blur', function () {
+            if (!document.hidden) triggerAntiCheat();
+        });
+    }
+
 })();
