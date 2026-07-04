@@ -54,6 +54,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
+                'accounts.context_processors.site_settings',
             ],
         },
     },
@@ -126,6 +127,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.user_details',
 )
 
+SOCIAL_AUTH_STRATEGY             = 'accounts.social_strategy.DBDjangoStrategy'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL   = '/'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'
 SOCIAL_AUTH_REDIRECT_IS_HTTPS    = False   # 開發環境使用 HTTP

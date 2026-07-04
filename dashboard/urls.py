@@ -8,4 +8,5 @@ urlpatterns = [
     path('weakness/', views.weakness_analysis, name='weakness'),
     path('history/', views.practice_history, name='history'),
     path('class-stats/', views.class_stats, name='class_stats'),
+    path('settings/', views.site_settings_view, name='settings'),
 ]

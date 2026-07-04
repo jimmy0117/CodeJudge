@@ -224,6 +224,43 @@ apcs-practice-platform/
 | 指派考卷給班級 | ❌ | ✅ | ✅ |
 | 查看班級成績統計 | ❌ | ✅ | ✅ |
 | Django Admin 後台 | ❌ | ❌ | ✅ |
+| 平台設定（Google OAuth 等） | ❌ | ❌ | ✅ |
+
+---
+
+## Google OAuth 登入設定
+
+Google 帳號登入需要先在 Google Cloud Console 建立 OAuth 憑證，設定方式有兩種：
+
+### 方式一：透過前端管理員設定頁面（推薦）
+
+1. 以管理員帳號登入平台
+2. 上方「管理」選單 → **平台設定**（或直接前往 http://localhost:8443/dashboard/settings/）
+3. 在「Google 帳號登入」區塊填入 Client ID 和 Client Secret，並開啟啟用開關
+4. 點「儲存設定」，**立即生效，無需重啟容器**
+
+### 方式二：環境變數（`.env` 檔案）
+
+在 `.env` 填入並重啟容器：
+
+```env
+GOOGLE_OAUTH2_CLIENT_ID=你的Client_ID.apps.googleusercontent.com
+GOOGLE_OAUTH2_CLIENT_SECRET=你的Client_Secret
+```
+
+> **優先順序**：資料庫設定 > 環境變數。若資料庫已設定憑證，環境變數會被忽略。
+
+### 如何取得 Google OAuth 憑證
+
+1. 前往 [Google Cloud Console → 憑證](https://console.cloud.google.com/apis/credentials)
+2. 「建立憑證」→「OAuth 用戶端 ID」→ 應用程式類型：**網頁應用程式**
+3. 「已授權的重新導向 URI」加入：
+   ```
+   http://localhost:8443/social-auth/complete/google-oauth2/
+   ```
+4. 建立後複製 Client ID 與 Client Secret
+
+> **⚠️ 注意**：若 Google OAuth 同意畫面處於「測試」狀態，需在「測試使用者」中加入要登入的 Gmail 帳號。
 
 ---
 

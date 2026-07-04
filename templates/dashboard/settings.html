@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}平台設定 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="d-flex align-items-center mb-4 gap-3">
+                <div>
+                    <h2 class="fw-bold mb-0"><i class="bi bi-gear-fill me-2"></i>平台設定</h2>
+                    <small class="text-muted">僅限管理員存取</small>
+                </div>
+            </div>
+
+            <form method="post" id="settingsForm">
+                {% csrf_token %}
+                <input type="hidden" name="clear_secret" id="clearSecretField" value="0">
+
+                <!-- ── Google OAuth ──────────────────────────────────────── -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light d-flex align-items-center gap-2 py-3">
+                        <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                        </svg>
+                        <h5 class="mb-0 fw-semibold">Google 帳號登入</h5>
+                    </div>
+                    <div class="card-body p-4">
+
+                        <!-- 啟用開關 -->
+                        <div class="mb-4 d-flex align-items-center gap-3">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="google_oauth_enabled" name="google_oauth_enabled"
+                                       {% if settings_obj.google_oauth_enabled %}checked{% endif %}
+                                       style="width:3rem;height:1.5rem;">
+                            </div>
+                            <label class="form-check-label fw-semibold fs-6" for="google_oauth_enabled">
+                                啟用 Google 帳號登入
+                                {% if settings_obj.google_oauth_enabled %}
+                                <span class="badge bg-success ms-2">已啟用</span>
+                                {% else %}
+                                <span class="badge bg-secondary ms-2">已停用</span>
+                                {% endif %}
+                            </label>
+                        </div>
+
+                        <!-- Client ID -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="google_client_id">
+                                Client ID
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control font-monospace"
+                                   id="google_client_id" name="google_oauth_client_id"
+                                   value="{{ settings_obj.google_oauth_client_id }}"
+                                   placeholder="xxxxxxxxxxxxxxxx.apps.googleusercontent.com">
+                        </div>
+
+                        <!-- Client Secret -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="google_client_secret">
+                                Client Secret
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control font-monospace"
+                                       id="google_client_secret" name="google_oauth_client_secret"
+                                       placeholder="{% if settings_obj.google_oauth_client_secret %}已設定（輸入新值可覆蓋）{% else %}尚未設定{% endif %}">
+                                <button class="btn btn-outline-secondary" type="button"
+                                        onclick="toggleSecret()" id="toggleSecretBtn" title="顯示/隱藏">
+                                    <i class="bi bi-eye" id="toggleSecretIcon"></i>
+                                </button>
+                                {% if settings_obj.google_oauth_client_secret %}
+                                <button class="btn btn-outline-danger" type="button"
+                                        onclick="clearSecret()" title="清除 Secret">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% if settings_obj.google_oauth_client_secret %}
+                            <div class="form-text text-success">
+                                <i class="bi bi-check-circle me-1"></i>Secret 已設定。若要變更請輸入新值；若要清除請按垃圾桶。
+                            </div>
+                            {% else %}
+                            <div class="form-text text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>尚未設定 Client Secret。
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- 設定說明 -->
+                        <div class="alert alert-info mb-0 small">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            <strong>如何取得憑證：</strong>
+                            前往
+                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="alert-link">
+                                Google Cloud Console
+                            </a>
+                            →「建立憑證」→「OAuth 用戶端 ID」→ 應用程式類型選「網頁應用程式」。
+                            <br>
+                            在「已授權的重新導向 URI」加入：
+                            <code>http://localhost:8443/social-auth/complete/google-oauth2/</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 儲存按鈕 -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>儲存設定
+                    </button>
+                    <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">取消</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSecret() {
+    const input = document.getElementById('google_client_secret');
+    const icon  = document.getElementById('toggleSecretIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function clearSecret() {
+    if (confirm('確定要清除 Client Secret 嗎？清除後 Google 登入將無法使用。')) {
+        document.getElementById('google_client_secret').value = '';
+        document.getElementById('clearSecretField').value = '1';
+        document.getElementById('settingsForm').submit();
+    }
+}
+</script>
+{% endblock %}

@@ -22,6 +22,7 @@
                         </div>
                     </form>
 
+                    {% if google_login_available %}
                     <!-- 分隔線 -->
                     <div class="position-relative text-center my-4">
                         <hr class="my-0">
@@ -43,6 +44,7 @@
                             使用 Google 帳號登入
                         </a>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="card-footer text-center py-3">
                     <span class="text-muted">還沒有帳號？</span>

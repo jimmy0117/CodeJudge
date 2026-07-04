@@ -1,5 +1,6 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Count, Q
 from practice.models import PracticeRecord, WrongQuestion
 from exams.models import ExamSession
@@ -95,6 +96,36 @@ def practice_history(request):
     page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'dashboard/history.html', {'page_obj': page_obj})
+
+
+@login_required
+def site_settings_view(request):
+    """管理員平台設定頁面（僅限管理員）。"""
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_teacher_or_admin():
+        messages.error(request, '此頁面僅限管理員使用。')
+        return redirect('dashboard:index')
+
+    from accounts.models import SiteSettings
+    settings_obj = SiteSettings.get_solo()
+
+    if request.method == 'POST':
+        settings_obj.google_oauth_enabled = request.POST.get('google_oauth_enabled') == 'on'
+        settings_obj.google_oauth_client_id = request.POST.get('google_oauth_client_id', '').strip()
+
+        # 僅在管理員輸入新值時才覆蓋 Secret（避免送空值清除）
+        new_secret = request.POST.get('google_oauth_client_secret', '').strip()
+        if new_secret:
+            settings_obj.google_oauth_client_secret = new_secret
+
+        # 明確「清除」Secret
+        if request.POST.get('clear_secret') == '1':
+            settings_obj.google_oauth_client_secret = ''
+
+        settings_obj.save()
+        messages.success(request, '平台設定已儲存。')
+        return redirect('dashboard:settings')
+
+    return render(request, 'dashboard/settings.html', {'settings_obj': settings_obj})
 
 
 @login_required

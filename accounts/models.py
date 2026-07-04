@@ -24,6 +24,36 @@ class UserProfile(models.Model):
         return self.role in ['teacher', 'admin']
 
 
+class SiteSettings(models.Model):
+    """平台全域設定（Singleton，永遠只有 pk=1 那一筆）。"""
+    google_oauth_enabled = models.BooleanField(
+        default=False, verbose_name='啟用 Google 帳號登入'
+    )
+    google_oauth_client_id = models.CharField(
+        max_length=300, blank=True, verbose_name='Google Client ID'
+    )
+    google_oauth_client_secret = models.CharField(
+        max_length=300, blank=True, verbose_name='Google Client Secret'
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='上次更新')
+
+    class Meta:
+        verbose_name = '平台設定'
+        verbose_name_plural = '平台設定'
+
+    def __str__(self):
+        return '平台設定'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # 強制 Singleton
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
