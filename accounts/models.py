@@ -26,6 +26,27 @@ class UserProfile(models.Model):
 
 class SiteSettings(models.Model):
     """平台全域設定（Singleton，永遠只有 pk=1 那一筆）。"""
+
+    # ── 基本資訊 ──────────────────────────────────────────────────────────────
+    site_name = models.CharField(
+        max_length=100, default='APCS 練習平台', verbose_name='網站名稱'
+    )
+    site_icon = models.ImageField(
+        upload_to='site/', blank=True, null=True, verbose_name='網站圖示（Icon）'
+    )
+    footer_text = models.CharField(
+        max_length=200,
+        default='幫助學生準備 APCS 考試，提升程式設計能力',
+        blank=True,
+        verbose_name='頁尾文字',
+    )
+
+    # ── 顏色主題 ──────────────────────────────────────────────────────────────
+    navbar_color  = models.CharField(max_length=7, default='#212529', verbose_name='導覽列顏色')
+    primary_color = models.CharField(max_length=7, default='#0d6efd', verbose_name='主題色彩（按鈕/連結）')
+    hero_color    = models.CharField(max_length=7, default='#212529', verbose_name='首頁封面顏色')
+
+    # ── Google OAuth ──────────────────────────────────────────────────────────
     google_oauth_enabled = models.BooleanField(
         default=False, verbose_name='啟用 Google 帳號登入'
     )

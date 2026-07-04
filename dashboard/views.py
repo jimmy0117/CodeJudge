@@ -109,15 +109,39 @@ def site_settings_view(request):
     settings_obj = SiteSettings.get_solo()
 
     if request.method == 'POST':
-        settings_obj.google_oauth_enabled = request.POST.get('google_oauth_enabled') == 'on'
-        settings_obj.google_oauth_client_id = request.POST.get('google_oauth_client_id', '').strip()
+        # ── 基本資訊 ────────────────────────────────────────────────────────
+        settings_obj.site_name   = request.POST.get('site_name', 'APCS 練習平台').strip() or 'APCS 練習平台'
+        settings_obj.footer_text = request.POST.get('footer_text', '').strip()
 
-        # 僅在管理員輸入新值時才覆蓋 Secret（避免送空值清除）
+        # Icon 上傳
+        if 'site_icon' in request.FILES:
+            # 刪除舊檔案
+            if settings_obj.site_icon:
+                settings_obj.site_icon.delete(save=False)
+            settings_obj.site_icon = request.FILES['site_icon']
+        # 明確移除 icon
+        if request.POST.get('remove_icon') == '1' and settings_obj.site_icon:
+            settings_obj.site_icon.delete(save=False)
+            settings_obj.site_icon = None
+
+        # ── 顏色主題 ────────────────────────────────────────────────────────
+        import re
+        hex_re = re.compile(r'^#[0-9A-Fa-f]{6}$')
+
+        def safe_color(val, default):
+            val = (val or '').strip()
+            return val if hex_re.match(val) else default
+
+        settings_obj.navbar_color  = safe_color(request.POST.get('navbar_color'),  '#212529')
+        settings_obj.primary_color = safe_color(request.POST.get('primary_color'), '#0d6efd')
+        settings_obj.hero_color    = safe_color(request.POST.get('hero_color'),    '#212529')
+
+        # ── Google OAuth ────────────────────────────────────────────────────
+        settings_obj.google_oauth_enabled  = request.POST.get('google_oauth_enabled') == 'on'
+        settings_obj.google_oauth_client_id = request.POST.get('google_oauth_client_id', '').strip()
         new_secret = request.POST.get('google_oauth_client_secret', '').strip()
         if new_secret:
             settings_obj.google_oauth_client_secret = new_secret
-
-        # 明確「清除」Secret
         if request.POST.get('clear_secret') == '1':
             settings_obj.google_oauth_client_secret = ''
 

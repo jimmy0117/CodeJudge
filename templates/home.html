@@ -4,10 +4,16 @@
 
 {% block content %}
 <!-- Hero Section -->
-<div class="bg-dark text-white py-5">
+<div class="text-white py-5" style="background-color: var(--apcs-hero);">
     <div class="container text-center">
         <h1 class="display-4 fw-bold mb-3">
-            <i class="bi bi-code-square me-3"></i>APCS 選擇題練習平台
+            {% if site_settings and site_settings.site_icon %}
+            <img src="{{ site_settings.site_icon.url }}" width="48" height="48"
+                 class="me-2 rounded-2" alt="icon" style="vertical-align: middle;">
+            {% else %}
+            <i class="bi bi-code-square me-3"></i>
+            {% endif %}
+            {{ site_settings.site_name|default:"APCS 選擇題練習平台" }}
         </h1>
         <p class="lead mb-4">
             系統化練習 APCS 選擇題、追蹤學習進度、分析弱點，讓備考更有效率！

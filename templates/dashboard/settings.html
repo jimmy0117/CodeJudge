@@ -5,20 +5,176 @@
 {% block content %}
 <div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-9">
 
             <div class="d-flex align-items-center mb-4 gap-3">
                 <div>
                     <h2 class="fw-bold mb-0"><i class="bi bi-gear-fill me-2"></i>平台設定</h2>
-                    <small class="text-muted">僅限管理員存取</small>
+                    <small class="text-muted">設定即時生效，無需重啟容器</small>
                 </div>
             </div>
 
-            <form method="post" id="settingsForm">
+            <form method="post" enctype="multipart/form-data" id="settingsForm">
                 {% csrf_token %}
                 <input type="hidden" name="clear_secret" id="clearSecretField" value="0">
+                <input type="hidden" name="remove_icon"  id="removeIconField"  value="0">
 
-                <!-- ── Google OAuth ──────────────────────────────────────── -->
+                <!-- ── 基本資訊 ───────────────────────────────────────────── -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0 fw-semibold">
+                            <i class="bi bi-info-circle me-2 text-primary"></i>基本資訊
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+
+                        <!-- 網站名稱 -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="site_name">網站名稱</label>
+                            <input type="text" class="form-control" id="site_name" name="site_name"
+                                   value="{{ settings_obj.site_name }}"
+                                   placeholder="APCS 練習平台">
+                            <div class="form-text">顯示於導覽列品牌、首頁標題與瀏覽器分頁。</div>
+                        </div>
+
+                        <!-- 網站 Icon -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">網站圖示（Icon）</label>
+                            <div class="d-flex align-items-center gap-3 flex-wrap">
+                                <!-- 目前圖示預覽 -->
+                                <div id="iconPreviewWrap"
+                                     class="border rounded d-flex align-items-center justify-content-center bg-light"
+                                     style="width:64px;height:64px;overflow:hidden;flex-shrink:0;">
+                                    {% if settings_obj.site_icon %}
+                                    <img id="iconPreview" src="{{ settings_obj.site_icon.url }}"
+                                         style="width:100%;height:100%;object-fit:contain;" alt="icon">
+                                    {% else %}
+                                    <i class="bi bi-image text-muted fs-3" id="iconPlaceholder"></i>
+                                    <img id="iconPreview" src="" style="display:none;width:100%;height:100%;object-fit:contain;" alt="icon">
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <input type="file" class="form-control mb-2" id="site_icon"
+                                           name="site_icon" accept="image/*">
+                                    <div class="form-text">建議使用 PNG/SVG，尺寸 64×64 或更大。將顯示於導覽列、首頁、頁尾與瀏覽器分頁（favicon）。</div>
+                                </div>
+                                {% if settings_obj.site_icon %}
+                                <button type="button" class="btn btn-outline-danger btn-sm align-self-start"
+                                        onclick="removeIcon()">
+                                    <i class="bi bi-trash me-1"></i>移除圖示
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 頁尾文字 -->
+                        <div class="mb-0">
+                            <label class="form-label fw-semibold" for="footer_text">頁尾說明文字</label>
+                            <input type="text" class="form-control" id="footer_text" name="footer_text"
+                                   value="{{ settings_obj.footer_text }}"
+                                   placeholder="幫助學生準備 APCS 考試，提升程式設計能力">
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ── 顏色主題 ───────────────────────────────────────────── -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-light py-3">
+                        <h5 class="mb-0 fw-semibold">
+                            <i class="bi bi-palette me-2 text-primary"></i>顏色主題
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3 mb-4">
+
+                            <!-- 導覽列顏色 -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="navbar_color">導覽列顏色</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color"
+                                           id="navbar_color" name="navbar_color"
+                                           value="{{ settings_obj.navbar_color }}"
+                                           oninput="updatePreview()">
+                                    <input type="text" class="form-control font-monospace"
+                                           id="navbar_color_hex"
+                                           value="{{ settings_obj.navbar_color }}"
+                                           maxlength="7" pattern="#[0-9A-Fa-f]{6}"
+                                           oninput="syncColor('navbar_color', this.value)">
+                                </div>
+                                <div class="form-text">影響頂部導覽列背景。</div>
+                            </div>
+
+                            <!-- 主題色彩 -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="primary_color">主題色彩</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color"
+                                           id="primary_color" name="primary_color"
+                                           value="{{ settings_obj.primary_color }}"
+                                           oninput="updatePreview()">
+                                    <input type="text" class="form-control font-monospace"
+                                           id="primary_color_hex"
+                                           value="{{ settings_obj.primary_color }}"
+                                           maxlength="7" pattern="#[0-9A-Fa-f]{6}"
+                                           oninput="syncColor('primary_color', this.value)">
+                                </div>
+                                <div class="form-text">按鈕、連結、強調色。</div>
+                            </div>
+
+                            <!-- 首頁封面顏色 -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="hero_color">首頁封面顏色</label>
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color"
+                                           id="hero_color" name="hero_color"
+                                           value="{{ settings_obj.hero_color }}"
+                                           oninput="updatePreview()">
+                                    <input type="text" class="form-control font-monospace"
+                                           id="hero_color_hex"
+                                           value="{{ settings_obj.hero_color }}"
+                                           maxlength="7" pattern="#[0-9A-Fa-f]{6}"
+                                           oninput="syncColor('hero_color', this.value)">
+                                </div>
+                                <div class="form-text">首頁大標題區塊背景。</div>
+                            </div>
+                        </div>
+
+                        <!-- 即時預覽 -->
+                        <div class="border rounded overflow-hidden">
+                            <div class="d-flex align-items-center px-3 py-2 gap-2" id="previewNavbar"
+                                 style="background-color: {{ settings_obj.navbar_color }};">
+                                <span class="text-white fw-bold small">{{ settings_obj.site_name }}</span>
+                                <span class="ms-auto text-white small opacity-75">導覽列預覽</span>
+                            </div>
+                            <div class="p-3 d-flex align-items-center gap-2 flex-wrap"
+                                 id="previewBody" style="background:#f8f9fa;">
+                                <button type="button" class="btn btn-sm text-white" id="previewBtn"
+                                        style="background-color: {{ settings_obj.primary_color }}; border-color: {{ settings_obj.primary_color }};">
+                                    主題按鈕
+                                </button>
+                                <a href="#" class="small" id="previewLink"
+                                   style="color: {{ settings_obj.primary_color }};"
+                                   onclick="return false;">主題連結</a>
+                                <span class="ms-auto small text-muted">即時預覽</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-center py-3"
+                                 id="previewHero"
+                                 style="background-color: {{ settings_obj.hero_color }}; min-height:60px;">
+                                <span class="text-white fw-semibold small">首頁封面區塊</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="resetColors()">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>還原預設顏色
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ── Google 帳號登入 ────────────────────────────────────── -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-light d-flex align-items-center gap-2 py-3">
                         <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -30,8 +186,6 @@
                         <h5 class="mb-0 fw-semibold">Google 帳號登入</h5>
                     </div>
                     <div class="card-body p-4">
-
-                        <!-- 啟用開關 -->
                         <div class="mb-4 d-flex align-items-center gap-3">
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" role="switch"
@@ -48,71 +202,52 @@
                                 {% endif %}
                             </label>
                         </div>
-
-                        <!-- Client ID -->
                         <div class="mb-3">
-                            <label class="form-label fw-semibold" for="google_client_id">
-                                Client ID
-                                <span class="text-danger">*</span>
-                            </label>
+                            <label class="form-label fw-semibold">Client ID <span class="text-danger">*</span></label>
                             <input type="text" class="form-control font-monospace"
-                                   id="google_client_id" name="google_oauth_client_id"
+                                   name="google_oauth_client_id"
                                    value="{{ settings_obj.google_oauth_client_id }}"
                                    placeholder="xxxxxxxxxxxxxxxx.apps.googleusercontent.com">
                         </div>
-
-                        <!-- Client Secret -->
                         <div class="mb-3">
-                            <label class="form-label fw-semibold" for="google_client_secret">
-                                Client Secret
-                                <span class="text-danger">*</span>
-                            </label>
+                            <label class="form-label fw-semibold">Client Secret <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <input type="password" class="form-control font-monospace"
                                        id="google_client_secret" name="google_oauth_client_secret"
                                        placeholder="{% if settings_obj.google_oauth_client_secret %}已設定（輸入新值可覆蓋）{% else %}尚未設定{% endif %}">
                                 <button class="btn btn-outline-secondary" type="button"
-                                        onclick="toggleSecret()" id="toggleSecretBtn" title="顯示/隱藏">
+                                        onclick="toggleSecret()" title="顯示/隱藏">
                                     <i class="bi bi-eye" id="toggleSecretIcon"></i>
                                 </button>
                                 {% if settings_obj.google_oauth_client_secret %}
                                 <button class="btn btn-outline-danger" type="button"
-                                        onclick="clearSecret()" title="清除 Secret">
+                                        onclick="clearSecret()" title="清除">
                                     <i class="bi bi-trash"></i>
                                 </button>
                                 {% endif %}
                             </div>
                             {% if settings_obj.google_oauth_client_secret %}
                             <div class="form-text text-success">
-                                <i class="bi bi-check-circle me-1"></i>Secret 已設定。若要變更請輸入新值；若要清除請按垃圾桶。
-                            </div>
-                            {% else %}
-                            <div class="form-text text-warning">
-                                <i class="bi bi-exclamation-triangle me-1"></i>尚未設定 Client Secret。
+                                <i class="bi bi-check-circle me-1"></i>Secret 已設定。
                             </div>
                             {% endif %}
                         </div>
-
-                        <!-- 設定說明 -->
-                        <div class="alert alert-info mb-0 small">
+                        <div class="alert alert-info small mb-0">
                             <i class="bi bi-info-circle-fill me-1"></i>
-                            <strong>如何取得憑證：</strong>
                             前往
                             <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="alert-link">
                                 Google Cloud Console
                             </a>
-                            →「建立憑證」→「OAuth 用戶端 ID」→ 應用程式類型選「網頁應用程式」。
-                            <br>
-                            在「已授權的重新導向 URI」加入：
+                            建立 OAuth 用戶端。重新導向 URI 設為：
                             <code>http://localhost:8443/social-auth/complete/google-oauth2/</code>
                         </div>
                     </div>
                 </div>
 
                 <!-- 儲存按鈕 -->
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 pb-4">
                     <button type="submit" class="btn btn-primary px-4">
-                        <i class="bi bi-check-lg me-1"></i>儲存設定
+                        <i class="bi bi-check-lg me-1"></i>儲存所有設定
                     </button>
                     <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">取消</a>
                 </div>
@@ -125,24 +260,76 @@
 
 {% block extra_js %}
 <script>
-function toggleSecret() {
-    const input = document.getElementById('google_client_secret');
-    const icon  = document.getElementById('toggleSecretIcon');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'bi bi-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'bi bi-eye';
+// ── 顏色同步與即時預覽 ────────────────────────────────────────────────────────
+function syncColor(id, hexVal) {
+    const re = /^#[0-9A-Fa-f]{6}$/;
+    if (re.test(hexVal)) {
+        document.getElementById(id).value = hexVal;
+        updatePreview();
     }
 }
 
-function clearSecret() {
-    if (confirm('確定要清除 Client Secret 嗎？清除後 Google 登入將無法使用。')) {
-        document.getElementById('google_client_secret').value = '';
-        document.getElementById('clearSecretField').value = '1';
-        document.getElementById('settingsForm').submit();
+function updatePreview() {
+    const navbar  = document.getElementById('navbar_color').value;
+    const primary = document.getElementById('primary_color').value;
+    const hero    = document.getElementById('hero_color').value;
+
+    // Sync hex inputs
+    document.getElementById('navbar_color_hex').value  = navbar;
+    document.getElementById('primary_color_hex').value = primary;
+    document.getElementById('hero_color_hex').value    = hero;
+
+    // Update preview
+    document.getElementById('previewNavbar').style.backgroundColor = navbar;
+    document.getElementById('previewBtn').style.backgroundColor    = primary;
+    document.getElementById('previewBtn').style.borderColor        = primary;
+    document.getElementById('previewLink').style.color             = primary;
+    document.getElementById('previewHero').style.backgroundColor   = hero;
+}
+
+function resetColors() {
+    const defaults = { navbar_color: '#212529', primary_color: '#0d6efd', hero_color: '#212529' };
+    for (const [id, val] of Object.entries(defaults)) {
+        document.getElementById(id).value = val;
+        document.getElementById(id + '_hex').value = val;
     }
+    updatePreview();
+}
+
+// ── Icon 上傳預覽 ─────────────────────────────────────────────────────────────
+document.getElementById('site_icon')?.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById('iconPreview');
+        const ph  = document.getElementById('iconPlaceholder');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (ph) ph.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+});
+
+function removeIcon() {
+    if (!confirm('確定要移除網站圖示嗎？')) return;
+    document.getElementById('removeIconField').value = '1';
+    document.getElementById('settingsForm').submit();
+}
+
+// ── Google Secret 顯示/隱藏 ───────────────────────────────────────────────────
+function toggleSecret() {
+    const input = document.getElementById('google_client_secret');
+    const icon  = document.getElementById('toggleSecretIcon');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    icon.className = input.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+function clearSecret() {
+    if (!confirm('確定要清除 Client Secret 嗎？')) return;
+    document.getElementById('google_client_secret').value = '';
+    document.getElementById('clearSecretField').value = '1';
+    document.getElementById('settingsForm').submit();
 }
 </script>
 {% endblock %}
