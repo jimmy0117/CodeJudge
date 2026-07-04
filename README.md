@@ -94,52 +94,11 @@ docker-compose up --build
 
 ### 4. 建立管理員帳號
 
-**步驟一：建立 Django 超級使用者（互動式輸入帳號/密碼）**
-
 ```bash
 docker exec -it codejudge-web-1 python manage.py createsuperuser
 ```
 
-依提示輸入 `Username`、`Email`、`Password`。
-
-> ⚠️ **注意**：`createsuperuser` 只設定 Django 的 `is_superuser`，本平台的角色（`UserProfile.role`）預設為 `student`，必須執行步驟二才能讓管理員使用平台的教師／管理員功能。
-
-**步驟二：將 UserProfile 角色設為管理員**
-
-將 `<your_username>` 換成剛才設定的帳號：
-
-```bash
-docker exec codejudge-web-1 python manage.py shell -c "
-from django.contrib.auth.models import User
-u = User.objects.get(username='<your_username>')
-u.profile.role = 'admin'
-u.profile.save()
-print(f'✅  {u.username} 的角色已設為：', u.profile.get_role_display())
-"
-```
-
-**或者，兩步合一（非互動式，適合 CI / 腳本自動化）**
-
-```bash
-docker exec codejudge-web-1 python manage.py shell -c "
-from django.contrib.auth.models import User
-from accounts.models import UserProfile
-
-username = 'admin'
-password = 'change-me-now'
-email    = 'admin@example.com'
-
-if not User.objects.filter(username=username).exists():
-    u = User.objects.create_superuser(username, email, password)
-    u.profile.role = 'admin'
-    u.profile.save()
-    print(f'✅  超級管理員已建立：{username}  /  {password}')
-else:
-    print('⚠️  使用者已存在，略過建立')
-"
-```
-
-> 正式環境請務必修改 `password` 為強密碼。
+依提示輸入 `Username`、`Email`、`Password`。系統會自動將 `UserProfile.role` 設為 `admin`，建立完成即可直接使用所有管理功能。
 
 ### 5. 開啟瀏覽器
 
@@ -197,17 +156,8 @@ docker exec codejudge-web-1 python manage.py migrate
 # 建立 migration（修改 model 後執行）
 docker exec codejudge-web-1 python manage.py makemigrations
 
-# 建立超級管理員（互動式）
+# 建立超級管理員（UserProfile.role 會自動設為 admin）
 docker exec -it codejudge-web-1 python manage.py createsuperuser
-
-# 建立後需將 UserProfile 角色設為 admin（將 admin 換成實際帳號）
-docker exec codejudge-web-1 python manage.py shell -c "
-from django.contrib.auth.models import User
-u = User.objects.get(username='admin')
-u.profile.role = 'admin'
-u.profile.save()
-print(u.username, '->', u.profile.get_role_display())
-"
 
 # 收集靜態檔案
 docker exec codejudge-web-1 python manage.py collectstatic --noinput
