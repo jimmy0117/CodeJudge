@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load question_filters %}
 
 {% block title %}{{ question.title }} - APCS 練習平台{% endblock %}
 
@@ -39,8 +40,8 @@
                 </div>
                 <div class="card-body p-4">
                     <h4 class="mb-4">{{ question.title }}</h4>
-                    <div class="question-content mb-4 p-3 bg-light rounded">
-                        {{ question.content|linebreaks }}
+                    <div class="question-body mb-4">
+                        {% format_question question %}
                     </div>
 
                     <h6 class="text-muted mb-3">選項</h6>

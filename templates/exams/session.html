@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load question_filters %}
 
 {% block title %}{{ exam.title }} - 作答中{% endblock %}
 
@@ -75,7 +76,7 @@
                 </div>
                 <div class="card-body p-4">
                     <h6 class="mb-3">{{ eq.question.title }}</h6>
-                    <div class="bg-light p-3 rounded mb-4 small">{{ eq.question.content|linebreaks }}</div>
+                    <div class="question-body mb-4 small">{% format_question eq.question %}</div>
 
                     <div class="options-group" data-question-id="{{ eq.question.pk }}" data-session="{{ session.pk }}">
                         {% with current_answer=answers|default_if_none:'' %}

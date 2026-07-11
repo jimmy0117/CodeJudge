@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load question_filters %}
 
 {% block title %}練習題目 {{ index }}/{{ total }} - APCS 練習平台{% endblock %}
 
@@ -29,8 +30,8 @@
                 </div>
                 <div class="card-body p-4">
                     <h5 class="mb-3">{{ question.title }}</h5>
-                    <div class="bg-light p-3 rounded mb-4">
-                        {{ question.content|linebreaks }}
+                    <div class="question-body mb-4">
+                        {% format_question question %}
                     </div>
 
                     <form method="post" id="answerForm">
