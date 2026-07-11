@@ -9,6 +9,7 @@ urlpatterns = [
     path('create/', views.question_create, name='create'),
     path('<int:pk>/edit/', views.question_edit, name='edit'),
     path('<int:pk>/delete/', views.question_delete, name='delete'),
+    path('bulk-delete/', views.question_bulk_delete, name='bulk_delete'),
     path('categories/', views.category_list, name='category_list'),
     path('import/', views.question_import, name='import'),
     path('import/sample/', views.download_sample_csv, name='import_sample'),

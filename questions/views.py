@@ -96,11 +96,36 @@ def question_delete(request, pk):
     question = get_object_or_404(Question, pk=pk)
     if request.method == 'POST':
         title = question.title
-        question.is_active = False
-        question.save()
-        messages.success(request, f'題目「{title}」已停用。')
+        question.delete()           # 真實刪除（CASCADE 聯動刪除作答紀錄等）
+        messages.success(request, f'題目「{title}」已永久刪除。')
         return redirect('questions:list')
-    return render(request, 'questions/confirm_delete.html', {'question': question})
+    # 顯示確認頁前先計算關聯資料數
+    context = {
+        'question': question,
+        'practice_count':  question.practicerecord_set.count(),
+        'wrong_count':     question.wrongquestion_set.count(),
+        'favorite_count':  question.favoritequestion_set.count(),
+        'note_count':      question.questionnote_set.count(),
+        'exam_count':      question.in_exams.count(),
+    }
+    return render(request, 'questions/confirm_delete.html', context)
+
+
+@teacher_required
+def question_bulk_delete(request):
+    """批量刪除題目（POST：ids 為逗號分隔的題目 ID）。"""
+    if request.method != 'POST':
+        return redirect('questions:list')
+    ids_raw = request.POST.get('ids', '')
+    ids = [i.strip() for i in ids_raw.split(',') if i.strip().isdigit()]
+    if not ids:
+        messages.warning(request, '未選取任何題目。')
+        return redirect('questions:list')
+    qs = Question.objects.filter(pk__in=ids)
+    count = qs.count()
+    qs.delete()
+    messages.success(request, f'已永久刪除 {count} 道題目。')
+    return redirect('questions:list')
 
 
 @teacher_required
