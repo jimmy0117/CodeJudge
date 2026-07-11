@@ -152,9 +152,9 @@ def question_import(request):
                         raise ValueError(f'欄位「{col}」不能為空')
 
                 correct_answer = row['correct_answer'].strip().upper()
-                if correct_answer not in ('A', 'B', 'C', 'D'):
+                if correct_answer not in ('A', 'B', 'C', 'D', 'E'):
                     raise ValueError(
-                        f'correct_answer 必須是 A/B/C/D，目前為「{correct_answer}」'
+                        f'correct_answer 必須是 A/B/C/D/E，目前為「{correct_answer}」'
                     )
 
                 # ── 選填欄位 ──────────────────────────────────────────────
@@ -187,6 +187,7 @@ def question_import(request):
                     option_b=row['option_b'].strip(),
                     option_c=row['option_c'].strip(),
                     option_d=row['option_d'].strip(),
+                    option_e=row.get('option_e', '').strip(),
                     correct_answer=correct_answer,
                     category=category,
                     difficulty=difficulty,
@@ -239,14 +240,14 @@ def download_sample_csv(request):
     writer = csv.writer(response)
     writer.writerow([
         'title', 'content',
-        'option_a', 'option_b', 'option_c', 'option_d',
+        'option_a', 'option_b', 'option_c', 'option_d', 'option_e',
         'correct_answer', 'category', 'difficulty', 'year',
         'hint', 'solution_idea', 'explanation', 'tags', 'is_active',
     ])
     writer.writerow([
         '以下哪個是 Python 的迴圈語法？',
         '在 Python 中，哪個關鍵字用於建立計次迴圈？',
-        'for', 'loop', 'repeat', 'iterate',
+        'for', 'loop', 'repeat', 'iterate', '',
         'A', '基礎語法', 'easy', '2023',
         '想想 Python 的基本控制流程關鍵字。',
         '回想學過的迴圈寫法。',
@@ -260,6 +261,7 @@ def download_sample_csv(request):
         'O(n²)',
         'O(log n)',
         'O(1)',
+        '以上皆非',
         'B', '時間複雜度', 'hard', '2022',
         '計算迴圈執行次數。',
         '最外層迴圈執行 n 次，內層也執行 n 次。',

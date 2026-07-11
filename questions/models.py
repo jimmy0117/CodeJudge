@@ -33,7 +33,7 @@ class Tag(models.Model):
 
 
 class Question(models.Model):
-    ANSWER_CHOICES = [('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D')]
+    ANSWER_CHOICES = [('A', 'A'), ('B', 'B'), ('C', 'C'), ('D', 'D'), ('E', 'E')]
 
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True,
@@ -46,6 +46,7 @@ class Question(models.Model):
     option_b = models.TextField(verbose_name='選項 B')
     option_c = models.TextField(verbose_name='選項 C')
     option_d = models.TextField(verbose_name='選項 D')
+    option_e = models.TextField(blank=True, verbose_name='選項 E（可留空）')
     correct_answer = models.CharField(
         max_length=1, choices=ANSWER_CHOICES, verbose_name='正確答案'
     )
@@ -69,9 +70,12 @@ class Question(models.Model):
         return f'[{self.get_difficulty_display()}] {self.title}'
 
     def get_options(self):
-        return [
+        opts = [
             ('A', self.option_a),
             ('B', self.option_b),
             ('C', self.option_c),
             ('D', self.option_d),
         ]
+        if self.option_e:
+            opts.append(('E', self.option_e))
+        return opts
