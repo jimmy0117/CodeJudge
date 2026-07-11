@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+
+{% block title %}CSV 匯入題目 - APCS 練習平台{% endblock %}
+
+{% block extra_css %}
+<style>
+.drop-zone {
+    border: 2px dashed #adb5bd;
+    border-radius: 0.5rem;
+    transition: border-color 0.2s, background-color 0.2s;
+    cursor: pointer;
+}
+.drop-zone.dragover {
+    border-color: var(--apcs-primary);
+    background-color: #f0f4ff;
+}
+.drop-zone.has-file {
+    border-color: #198754;
+    background-color: #f0fff4;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="{% url 'questions:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="fw-bold mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>CSV 批量匯入題目</h2>
+            <small class="text-muted">一次上傳多題，支援 UTF-8 / Big5 編碼</small>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- 左欄：上傳表單 -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-upload me-2"></i>上傳 CSV 檔案</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data" id="importForm">
+                        {% csrf_token %}
+
+                        <!-- 拖曳上傳區 -->
+                        <div class="drop-zone p-4 text-center mb-3" id="dropZone"
+                             onclick="document.getElementById('csv_file').click()">
+                            <i class="bi bi-file-earmark-spreadsheet display-4 text-muted mb-2 d-block"></i>
+                            <p class="mb-1 fw-semibold" id="dropText">點擊或拖曳 CSV 檔案至此</p>
+                            <small class="text-muted" id="fileName">僅接受 .csv 格式</small>
+                        </div>
+                        <input type="file" id="csv_file" name="csv_file"
+                               accept=".csv" class="d-none">
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-cloud-upload me-2"></i>開始匯入
+                            </button>
+                            <a href="{% url 'questions:import_sample' %}"
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-download me-2"></i>下載範例 CSV
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 注意事項 -->
+            <div class="card shadow-sm mt-3 border-warning">
+                <div class="card-body p-3">
+                    <h6 class="fw-semibold text-warning mb-2">
+                        <i class="bi bi-exclamation-triangle me-1"></i>注意事項
+                    </h6>
+                    <ul class="small mb-0 ps-3">
+                        <li>分類（category）不存在時會<strong>自動建立</strong></li>
+                        <li>標籤（tags）不存在時會<strong>自動建立</strong></li>
+                        <li>同一次匯入中的錯誤列會略過，其餘照常匯入</li>
+                        <li>建議用 Excel 另存為「CSV UTF-8（逗號分隔）」</li>
+                        <li>欄位值若含逗號，請用雙引號包住：<code>"A, B"</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右欄：CSV 格式說明 -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-semibold"><i class="bi bi-table me-2"></i>CSV 格式說明</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0 small">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>欄位名稱</th>
+                                    <th>必填</th>
+                                    <th>說明</th>
+                                    <th>範例</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-warning">
+                                    <td><code>title</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>題目標題</td>
+                                    <td>下列哪個是迴圈？</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>content</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>題目內容（可多行）</td>
+                                    <td>在 Python 中…</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>option_a</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>選項 A</td>
+                                    <td>for</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>option_b</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>選項 B</td>
+                                    <td>loop</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>option_c</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>選項 C</td>
+                                    <td>repeat</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>option_d</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>選項 D</td>
+                                    <td>iterate</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><code>correct_answer</code></td>
+                                    <td><span class="badge bg-danger">必填</span></td>
+                                    <td>正確答案（A/B/C/D）</td>
+                                    <td>A</td>
+                                </tr>
+                                <tr>
+                                    <td><code>category</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>分類名稱（不存在則建立）</td>
+                                    <td>基礎語法</td>
+                                </tr>
+                                <tr>
+                                    <td><code>difficulty</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>難度：easy / medium / hard<br>預設 medium</td>
+                                    <td>easy</td>
+                                </tr>
+                                <tr>
+                                    <td><code>year</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>年份（整數）</td>
+                                    <td>2023</td>
+                                </tr>
+                                <tr>
+                                    <td><code>hint</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>第一層提示</td>
+                                    <td>想想迴圈關鍵字</td>
+                                </tr>
+                                <tr>
+                                    <td><code>solution_idea</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>解題思路</td>
+                                    <td>回想基本語法…</td>
+                                </tr>
+                                <tr>
+                                    <td><code>explanation</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>完整詳解</td>
+                                    <td>Python 使用 for…</td>
+                                </tr>
+                                <tr>
+                                    <td><code>tags</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>標籤，逗號分隔（不存在則建立）</td>
+                                    <td>Python,迴圈,基礎</td>
+                                </tr>
+                                <tr>
+                                    <td><code>is_active</code></td>
+                                    <td><span class="badge bg-secondary">選填</span></td>
+                                    <td>啟用狀態，預設 True</td>
+                                    <td>True</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 匯入結果 -->
+    {% if done %}
+    <div class="mt-4">
+        <h4 class="fw-bold mb-3"><i class="bi bi-clipboard-data me-2"></i>匯入結果</h4>
+        <div class="row g-3 mb-4">
+            <div class="col-auto">
+                <div class="card border-success text-center px-4 py-3">
+                    <div class="display-5 fw-bold text-success">{{ success_count }}</div>
+                    <small class="text-muted">成功匯入</small>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="card border-danger text-center px-4 py-3">
+                    <div class="display-5 fw-bold text-danger">{{ error_count }}</div>
+                    <small class="text-muted">匯入失敗</small>
+                </div>
+            </div>
+        </div>
+
+        {% if success_rows %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-success text-white py-2">
+                <h6 class="mb-0"><i class="bi bi-check-circle me-2"></i>成功匯入（{{ success_count }} 題）</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr><th style="width:60px;">列號</th><th>題目標題</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for r in success_rows %}
+                        <tr>
+                            <td class="text-muted">{{ r.row }}</td>
+                            <td>{{ r.title }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if error_rows %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white py-2">
+                <h6 class="mb-0"><i class="bi bi-x-circle me-2"></i>失敗列表（{{ error_count }} 筆）</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:60px;">列號</th>
+                            <th>標題（部分）</th>
+                            <th>錯誤原因</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in error_rows %}
+                        <tr>
+                            <td class="text-danger fw-semibold">{{ r.row }}</td>
+                            <td class="text-muted">{{ r.title|default:"（空）" }}</td>
+                            <td><code class="text-danger">{{ r.error }}</code></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-3 d-flex gap-2">
+            <a href="{% url 'questions:list' %}" class="btn btn-primary">
+                <i class="bi bi-list-ul me-1"></i>前往題目列表
+            </a>
+            <a href="{% url 'questions:import' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-repeat me-1"></i>繼續匯入
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('csv_file');
+const dropText   = document.getElementById('dropText');
+const fileNameEl = document.getElementById('fileName');
+
+function showFile(name) {
+    dropText.textContent = '已選取檔案';
+    fileNameEl.textContent = name;
+    dropZone.classList.add('has-file');
+    dropZone.classList.remove('dragover');
+}
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) showFile(fileInput.files[0].name);
+});
+
+dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        showFile(file.name);
+    } else {
+        alert('請拖曳 .csv 格式的檔案。');
+        dropZone.classList.remove('dragover');
+    }
+});
+</script>
+{% endblock %}

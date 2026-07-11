@@ -7,9 +7,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold mb-0"><i class="bi bi-list-ul me-2"></i>題目列表</h2>
         {% if user.is_authenticated and user.profile.is_teacher_or_admin %}
-        <a href="{% url 'questions:create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i>新增題目
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'questions:import' %}" class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i>CSV 匯入
+            </a>
+            <a href="{% url 'questions:create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>新增題目
+            </a>
+        </div>
         {% endif %}
     </div>
 
