@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.db.models import Q, F
 from .models import Exam, ExamQuestion, ExamSession, ExamAnswer
@@ -66,8 +67,11 @@ def exam_edit(request, pk):
 @teacher_required
 def exam_detail(request, pk):
     exam = get_object_or_404(Exam, pk=pk)
-    exam_questions = exam.exam_questions.select_related('question').all()
-    all_questions = Question.objects.filter(is_active=True).select_related('category')
+    exam_questions = exam.exam_questions.select_related('question', 'question__category').all()
+    existing_ids = exam_questions.values_list('question_id', flat=True)
+    all_questions = Question.objects.filter(is_active=True).exclude(
+        pk__in=existing_ids
+    ).select_related('category')
     categories = Category.objects.all()
     return render(request, 'exams/detail.html', {
         'exam': exam,
@@ -81,15 +85,69 @@ def exam_detail(request, pk):
 def exam_add_question(request, pk):
     exam = get_object_or_404(Exam, pk=pk, created_by=request.user)
     if request.method == 'POST':
-        question_id = request.POST.get('question_id')
-        score = int(request.POST.get('score', 5))
-        question = get_object_or_404(Question, pk=question_id)
-        order = exam.exam_questions.count() + 1
-        ExamQuestion.objects.get_or_create(
-            exam=exam, question=question,
-            defaults={'order': order, 'score': score}
-        )
-        messages.success(request, f'題目已加入考卷。')
+        raw_ids = request.POST.get('question_ids', '')
+        ids = [int(x) for x in raw_ids.split(',') if x.strip().isdigit()]
+        try:
+            default_score = int(request.POST.get('default_score', 5))
+        except (TypeError, ValueError):
+            default_score = 5
+        default_score = max(default_score, 0)
+
+        if not ids:
+            messages.warning(request, '請至少選擇一題再加入。')
+            return redirect('exams:detail', pk=pk)
+
+        existing_ids = set(exam.exam_questions.values_list('question_id', flat=True))
+        next_order = exam.exam_questions.count() + 1
+        questions = Question.objects.filter(pk__in=ids, is_active=True)
+        added = 0
+        for question in questions:
+            if question.pk in existing_ids:
+                continue
+            ExamQuestion.objects.create(
+                exam=exam, question=question, order=next_order, score=default_score
+            )
+            next_order += 1
+            added += 1
+
+        if added:
+            messages.success(request, f'已加入 {added} 題，每題 {default_score} 分。')
+        else:
+            messages.info(request, '所選題目皆已在考卷中。')
+    return redirect('exams:detail', pk=pk)
+
+
+@teacher_required
+def question_preview(request, pk):
+    question = get_object_or_404(Question, pk=pk, is_active=True)
+    html = render_to_string(
+        'exams/_question_preview.html', {'question': question}, request=request
+    )
+    return JsonResponse({'html': html, 'title': question.title})
+
+
+@teacher_required
+def exam_update_scores(request, pk):
+    exam = get_object_or_404(Exam, pk=pk, created_by=request.user)
+    if request.method == 'POST':
+        updated = 0
+        for eq in exam.exam_questions.all():
+            field_name = f'score_{eq.pk}'
+            if field_name not in request.POST:
+                continue
+            try:
+                new_score = int(request.POST[field_name])
+            except (TypeError, ValueError):
+                continue
+            new_score = max(new_score, 0)
+            if new_score != eq.score:
+                eq.score = new_score
+                eq.save(update_fields=['score'])
+                updated += 1
+        if updated:
+            messages.success(request, f'已更新 {updated} 題的分數，考卷滿分 {exam.total_score()} 分。')
+        else:
+            messages.info(request, '分數沒有變更。')
     return redirect('exams:detail', pk=pk)
 
 
@@ -172,13 +230,30 @@ def exam_session(request, pk):
         elapsed = (timezone.now() - session.started_at).total_seconds()
         time_remaining = max(0, exam.time_limit * 60 - int(elapsed))
 
-    return render(request, 'exams/session.html', {
+    template = 'exams/session_official.html' if exam.official_ui else 'exams/session.html'
+    return render(request, template, {
         'session': session,
         'exam': exam,
         'exam_questions': exam_questions,
         'answers': answers,
         'time_remaining': time_remaining,
     })
+
+
+@login_required
+def exam_begin_timer(request, pk):
+    """official_ui 專用：學生按下「開始檢測並開始計時」後才重設計時起點，
+    不讓填寫登入／注意事項畫面的時間被算進考試時間。"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+    session = get_object_or_404(ExamSession, pk=pk, user=request.user)
+    if session.is_submitted:
+        return JsonResponse({'error': '已交卷'}, status=400)
+    session.started_at = timezone.now()
+    session.save(update_fields=['started_at'])
+    exam = session.exam
+    time_remaining = exam.time_limit * 60 if exam.time_limit else 1800
+    return JsonResponse({'time_remaining': time_remaining})
 
 
 @login_required

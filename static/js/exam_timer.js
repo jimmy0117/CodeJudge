@@ -36,6 +36,20 @@
 
     // ── Auto Submit ───────────────────────────────────────────────────────────
     function autoSubmit() {
+        // official_ui 版面有專屬的「作答結束」畫面，時間到就走同一套流程
+        const stageExam = document.getElementById('stageExam');
+        const stageEnd = document.getElementById('stageEnd');
+        if (stageExam && stageEnd) {
+            const overlay = document.getElementById('submitOverlay');
+            if (overlay) overlay.style.display = 'none'; // 若交卷確認畫面剛好開著，一併關閉
+            stageExam.classList.add('d-none');
+            stageEnd.classList.remove('d-none');
+            setTimeout(() => {
+                const form = document.getElementById('submitForm');
+                if (form) form.submit();
+            }, 1600);
+            return;
+        }
         alert('時間到！系統將自動交卷。');
         const form = document.getElementById('submitForm');
         if (form) form.submit();

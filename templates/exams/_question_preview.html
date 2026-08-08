@@ -1,0 +1,26 @@
+{% load question_filters %}
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    {% if question.category %}
+    <span class="badge bg-secondary">{{ question.category.name }}</span>
+    {% endif %}
+    <span class="badge {% if question.difficulty == 'easy' %}bg-success{% elif question.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+        {{ question.get_difficulty_display }}
+    </span>
+    {% if question.year %}
+    <span class="badge bg-info text-dark">{{ question.year }}年</span>
+    {% endif %}
+</div>
+<div class="question-body mb-3">
+    {% format_question question %}
+</div>
+<h6 class="text-muted mb-2">選項</h6>
+<div class="list-group mb-2">
+    {% for letter, text in question.get_options %}
+    <div class="list-group-item py-2 {% if letter == question.correct_answer %}list-group-item-success{% endif %}">
+        <strong>{{ letter }}.</strong> {{ text }}
+        {% if letter == question.correct_answer %}
+        <i class="bi bi-check-circle-fill text-success ms-1" title="正確答案"></i>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
