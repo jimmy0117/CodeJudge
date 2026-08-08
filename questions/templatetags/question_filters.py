@@ -21,10 +21,11 @@ _PY_KW = re.compile(
     r'\b(def|class|import|from|elif|except|with|pass|lambda|yield|async|await'
     r'|print|input|len|range|append|pop|sorted|enumerate|zip|True|False|None)\b'
 )
-_CODE_PUNCT = re.compile(r'[{};]|->|\+\+|--|[+\-*/%]=|==|!=|<=|>=')
+_CODE_PUNCT = re.compile(r'[{}\[\]();]|->|\+\+|--|[+\-*/%]=|==|!=|<=|>=')
 _INDENT     = re.compile(r'^\s{2,}')      # 縮排（2空白以上）
-_ASSIGN     = re.compile(r'\w\s*=\s*\w')  # 賦值
+_ASSIGN     = re.compile(r'(?<![=!<>])=(?!=)')  # 賦值（排除 ==, !=, <=, >=）
 _FUNC_CALL  = re.compile(r'\w+\s*\(')     # 函式呼叫
+_ZH_PUNCT   = re.compile(r'[，。：；？！、（）]')  # 全形中文標點（程式碼不會出現）
 
 def _code_score(line: str) -> int:
     """
@@ -33,6 +34,10 @@ def _code_score(line: str) -> int:
     s = line.strip()
     if not s:
         return 0
+
+    # 含全形中文標點 → 幾乎必為說明文字（即使夾雜了 = 、[]、() 等符號）
+    if _ZH_PUNCT.search(s):
+        return -5
 
     # 中文比例高 → 文字
     zh = sum(1 for c in s if '一' <= c <= '鿿')
@@ -86,9 +91,32 @@ def _render(content: str, forced_lang: str = 'auto') -> str:
     lines = content.split('\n')
 
     # 建立 (type, line) 序列，type 為 'code' | 'text'
-    typed = []
-    for line in lines:
-        typed.append(('code' if _code_score(line) > 0 else 'text', line))
+    scores = [_code_score(line) for line in lines]
+    typed = [('code' if sc > 0 else 'text', line) for sc, line in zip(scores, lines)]
+
+    # 橋接：夾在兩段程式碼之間、且整段都不具中文文字特徵（score 未判為負分）
+    # 的連續行（例如填空題的 ?1、?2 佔位符，或跨行字串常數），
+    # 整段視為程式碼的一部分，避免程式碼被切成不完整的片段。
+    non_blank = [i for i, line in enumerate(lines) if line.strip()]
+    n = len(non_blank)
+    pos = 0
+    while pos < n:
+        i = non_blank[pos]
+        if typed[i][0] != 'text':
+            pos += 1
+            continue
+        start = pos
+        end = pos
+        while end + 1 < n and typed[non_blank[end + 1]][0] == 'text':
+            end += 1
+        run_is_neutral = all(scores[non_blank[k]] >= 0 for k in range(start, end + 1))
+        has_prev_code = start > 0 and typed[non_blank[start - 1]][0] == 'code'
+        has_next_code = end < n - 1 and typed[non_blank[end + 1]][0] == 'code'
+        if run_is_neutral and has_prev_code and has_next_code:
+            for k in range(start, end + 1):
+                idx = non_blank[k]
+                typed[idx] = ('code', lines[idx])
+        pos = end + 1
 
     # 分組：連續同類型合併
     segments = []   # list of (type, [lines])

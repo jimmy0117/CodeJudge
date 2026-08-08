@@ -1,6 +1,5 @@
 from django import forms
-from .models import Exam, ExamQuestion
-from questions.models import Question
+from .models import Exam
 
 
 class ExamForm(forms.ModelForm):
@@ -9,7 +8,7 @@ class ExamForm(forms.ModelForm):
         fields = (
             'title', 'description', 'time_limit',
             'is_active', 'show_score', 'show_explanation',
-            'anti_cheat',
+            'anti_cheat', 'official_ui',
             'start_time', 'end_time'
         )
         labels = {
@@ -20,6 +19,7 @@ class ExamForm(forms.ModelForm):
             'show_score': '交卷後顯示分數',
             'show_explanation': '交卷後顯示詳解',
             'anti_cheat': '啟用防作弊（偵測切換視窗／分頁）',
+            'official_ui': '模擬 APCS 正式考試介面',
             'start_time': '開始時間',
             'end_time': '結束時間',
         }
@@ -42,11 +42,3 @@ class ExamJoinForm(forms.Form):
 
     def clean_code(self):
         return self.cleaned_data['code'].upper().strip()
-
-
-class ExamQuestionForm(forms.Form):
-    question_ids = forms.ModelMultipleChoiceField(
-        queryset=Question.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        label='選擇題目'
-    )

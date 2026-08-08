@@ -1,5 +1,6 @@
 import random
 import string
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 from questions.models import Question
@@ -24,6 +25,11 @@ class Exam(models.Model):
     show_score = models.BooleanField(default=True, verbose_name='顯示分數')
     show_explanation = models.BooleanField(default=False, verbose_name='顯示詳解')
     anti_cheat = models.BooleanField(default=False, verbose_name='啟用防作弊（切換視窗偵測）')
+    official_ui = models.BooleanField(
+        default=False,
+        verbose_name='模擬 APCS 正式考試介面',
+        help_text='開啟後，學生作答畫面會切換成類似 APCS 程式識讀檢測的單題單頁介面（無網站選單、頂部題號＋倒數、底部作答列）。'
+    )
     start_time = models.DateTimeField(null=True, blank=True, verbose_name='開始時間')
     end_time = models.DateTimeField(null=True, blank=True, verbose_name='結束時間')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='建立時間')
@@ -53,7 +59,9 @@ class ExamQuestion(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='exam_questions')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='in_exams')
     order = models.IntegerField(default=0, verbose_name='順序')
-    score = models.IntegerField(default=5, verbose_name='分數')
+    score = models.IntegerField(
+        default=5, validators=[MinValueValidator(0)], verbose_name='分數'
+    )
 
     class Meta:
         verbose_name = '考卷題目'

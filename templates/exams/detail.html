@@ -2,6 +2,17 @@
 
 {% block title %}{{ exam.title }} - 考卷管理{% endblock %}
 
+{% block extra_css %}
+<style>
+.score-input { width: 70px; }
+#questionList .list-group-item { cursor: pointer; }
+/* 用 class + 較高優先度覆蓋 Bootstrap .d-flex 的 !important，
+   避免篩選時用 inline style 隱藏題目卻被 Bootstrap 蓋掉的問題 */
+#questionList .list-group-item.q-hidden { display: none !important; }
+.preview-btn { flex-shrink: 0; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -9,7 +20,7 @@
             <h2 class="fw-bold mb-1">{{ exam.title }}</h2>
             <div class="d-flex gap-2 align-items-center">
                 <span class="badge bg-primary fs-6">代號：{{ exam.code }}</span>
-                <span class="text-muted small">{{ exam.time_limit }} 分鐘 | 共 {{ exam.question_count }} 題 | 滿分 {{ exam.total_score }} 分</span>
+                <span class="text-muted small" id="examStats">{{ exam.time_limit }} 分鐘 | 共 {{ exam.question_count }} 題 | 滿分 {{ exam.total_score }} 分</span>
             </div>
         </div>
         <div class="d-flex gap-2">
@@ -29,30 +40,53 @@
         <!-- Current Questions -->
         <div class="col-lg-7">
             <div class="card shadow-sm">
-                <div class="card-header bg-light d-flex justify-content-between">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">考卷題目（{{ exam.question_count }} 題）</h5>
+                    <span class="text-muted small">可直接修改每題分數</span>
                 </div>
-                <div class="list-group list-group-flush">
-                    {% for eq in exam_questions %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge bg-secondary me-2">{{ eq.order }}</span>
-                            {{ eq.question.title|truncatechars:60 }}
-                            <small class="text-muted ms-2">{{ eq.score }}分</small>
-                        </div>
-                        <form method="post" action="{% url 'exams:remove_question' exam.pk eq.pk %}" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('確定移除此題？')">
-                                <i class="bi bi-x"></i>
+                <form method="post" action="{% url 'exams:update_scores' exam.pk %}">
+                    {% csrf_token %}
+                    <div class="list-group list-group-flush">
+                        {% for eq in exam_questions %}
+                        <div class="list-group-item d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary flex-shrink-0">{{ eq.order }}</span>
+                            <div class="flex-grow-1">
+                                <div>{{ eq.question.title|truncatechars:60 }}</div>
+                                <div class="d-flex gap-1 mt-1">
+                                    {% if eq.question.category %}
+                                    <span class="badge bg-light text-dark border">{{ eq.question.category.name }}</span>
+                                    {% endif %}
+                                    <span class="badge bg-light text-dark border">{{ eq.question.get_difficulty_display }}</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary preview-btn"
+                                    onclick="previewQuestion({{ eq.question.pk }})" title="預覽題目">
+                                <i class="bi bi-eye"></i>
                             </button>
-                        </form>
+                            <div class="input-group input-group-sm score-input flex-shrink-0">
+                                <input type="number" class="form-control" name="score_{{ eq.pk }}"
+                                       value="{{ eq.score }}" min="0">
+                            </div>
+                            <button type="submit" formaction="{% url 'exams:remove_question' exam.pk eq.pk %}"
+                                    class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                    onclick="return confirm('確定移除此題？')" title="移除">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            尚未加入任何題目，請從右側選擇題目加入
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% empty %}
-                    <div class="list-group-item text-center text-muted py-4">
-                        尚未加入任何題目
+                    {% if exam_questions %}
+                    <div class="card-footer bg-white text-end">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-save me-1"></i>儲存分數變更
+                        </button>
                     </div>
-                    {% endfor %}
-                </div>
+                    {% endif %}
+                </form>
             </div>
         </div>
 
@@ -60,32 +94,97 @@
         <div class="col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">加入題目</h5>
+                    <h5 class="mb-0">加入題目 <span class="text-muted small">（{{ all_questions|length }} 題可選）</span></h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <select id="categoryFilter" class="form-select form-select-sm">
-                            <option value="">所有分類</option>
-                            {% for cat in categories %}
-                            <option value="{{ cat.pk }}">{{ cat.name }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <input type="text" id="qSearch" class="form-control form-control-sm" placeholder="搜尋題目標題...">
+                        </div>
+                        <div class="col-6">
+                            <select id="categoryFilter" class="form-select form-select-sm">
+                                <option value="">所有分類</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select id="difficultyFilter" class="form-select form-select-sm">
+                                <option value="">所有難度</option>
+                                <option value="easy">簡單</option>
+                                <option value="medium">中等</option>
+                                <option value="hard">困難</option>
+                            </select>
+                        </div>
                     </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="selectAllQ">
+                            <label for="selectAllQ" class="form-check-label small">全選（篩選後）</label>
+                        </div>
+                        <span class="small text-muted" id="visibleCount"></span>
+                    </div>
+
                     <div class="list-group overflow-auto" style="max-height: 400px;" id="questionList">
                         {% for q in all_questions %}
-                        <div class="list-group-item list-group-item-action py-2" data-category="{{ q.category_id }}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>{{ q.title|truncatechars:40 }}</small>
-                                <form method="post" action="{% url 'exams:add_question' exam.pk %}">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="question_id" value="{{ q.pk }}">
-                                    <input type="hidden" name="score" value="5">
-                                    <button type="submit" class="btn btn-xs btn-outline-primary" style="font-size:0.7rem;padding:2px 6px;">加入</button>
-                                </form>
-                            </div>
-                        </div>
+                        <label class="list-group-item list-group-item-action py-2 d-flex align-items-start gap-2"
+                               data-category="{{ q.category_id|default:'' }}"
+                               data-difficulty="{{ q.difficulty }}"
+                               data-title="{{ q.title|lower }}">
+                            <input type="checkbox" class="form-check-input add-q-check flex-shrink-0 mt-1" value="{{ q.pk }}">
+                            <span class="flex-grow-1">
+                                <small class="d-block">{{ q.title|truncatechars:44 }}</small>
+                                <span class="badge bg-light text-dark border">{{ q.get_difficulty_display }}</span>
+                                {% if q.category %}
+                                <span class="badge bg-light text-dark border">{{ q.category.name }}</span>
+                                {% endif %}
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary preview-btn"
+                                    onclick="event.preventDefault(); event.stopPropagation(); previewQuestion({{ q.pk }});"
+                                    title="預覽題目">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </label>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">沒有可加入的題目了</div>
                         {% endfor %}
                     </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <form method="post" action="{% url 'exams:add_question' exam.pk %}" id="addForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="question_ids" id="selectedIds">
+                        <div class="d-flex gap-2 align-items-center">
+                            <div class="input-group input-group-sm" style="width:135px;">
+                                <span class="input-group-text">每題</span>
+                                <input type="number" name="default_score" id="defaultScore"
+                                       class="form-control" value="5" min="0">
+                                <span class="input-group-text">分</span>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1" id="addBtn" disabled>
+                                <i class="bi bi-plus-lg me-1"></i>加入所選題目（<span id="selCount">0</span>）
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 題目預覽 Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalTitle">題目預覽</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewModalBody">
+                <div class="text-center text-muted py-4">
+                    <div class="spinner-border spinner-border-sm me-2"></div>載入中...
                 </div>
             </div>
         </div>
@@ -95,15 +194,92 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('categoryFilter').addEventListener('change', function() {
-    const val = this.value;
-    document.querySelectorAll('#questionList .list-group-item').forEach(item => {
-        if (!val || item.dataset.category === val) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
-        }
+(function () {
+    const searchInput = document.getElementById('qSearch');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const difficultyFilter = document.getElementById('difficultyFilter');
+    const selectAllQ = document.getElementById('selectAllQ');
+    const addBtn = document.getElementById('addBtn');
+    const addForm = document.getElementById('addForm');
+    const selCount = document.getElementById('selCount');
+    const visibleCount = document.getElementById('visibleCount');
+
+    const items = () => [...document.querySelectorAll('#questionList .list-group-item')];
+    const checks = () => [...document.querySelectorAll('.add-q-check')];
+    const visibleChecks = () => items().filter(i => !i.classList.contains('q-hidden'))
+        .map(i => i.querySelector('.add-q-check')).filter(Boolean);
+
+    function applyFilter() {
+        const kw = searchInput.value.trim().toLowerCase();
+        const cat = categoryFilter.value;
+        const diff = difficultyFilter.value;
+        let visible = 0;
+        items().forEach(item => {
+            if (!item.dataset.title) return; // empty-state row
+            const matchKw = !kw || item.dataset.title.includes(kw);
+            const matchCat = !cat || item.dataset.category === cat;
+            const matchDiff = !diff || item.dataset.difficulty === diff;
+            const show = matchKw && matchCat && matchDiff;
+            item.classList.toggle('q-hidden', !show);
+            if (show) visible++;
+        });
+        visibleCount.textContent = `顯示 ${visible} 題`;
+        updateSelectAllState();
+    }
+
+    function updateSelectAllState() {
+        const vis = visibleChecks();
+        const checkedVis = vis.filter(c => c.checked);
+        selectAllQ.indeterminate = checkedVis.length > 0 && checkedVis.length < vis.length;
+        selectAllQ.checked = vis.length > 0 && checkedVis.length === vis.length;
+    }
+
+    function updateSelection() {
+        const selected = checks().filter(c => c.checked);
+        selCount.textContent = selected.length;
+        addBtn.disabled = selected.length === 0;
+        updateSelectAllState();
+    }
+
+    searchInput.addEventListener('input', applyFilter);
+    categoryFilter.addEventListener('change', applyFilter);
+    difficultyFilter.addEventListener('change', applyFilter);
+    checks().forEach(c => c.addEventListener('change', updateSelection));
+    selectAllQ.addEventListener('change', function () {
+        visibleChecks().forEach(c => { c.checked = this.checked; });
+        updateSelection();
     });
-});
+
+    addForm.addEventListener('submit', function () {
+        const ids = checks().filter(c => c.checked).map(c => c.value).join(',');
+        document.getElementById('selectedIds').value = ids;
+    });
+
+    applyFilter();
+    updateSelection();
+})();
+
+const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+function previewQuestion(qid) {
+    const body = document.getElementById('previewModalBody');
+    const title = document.getElementById('previewModalTitle');
+    body.innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>載入中...</div>';
+    title.textContent = '題目預覽';
+    previewModal.show();
+    fetch(`/exams/question/${qid}/preview/`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+        .then(r => {
+            if (!r.ok) throw new Error('載入失敗');
+            return r.json();
+        })
+        .then(data => {
+            title.textContent = data.title;
+            body.innerHTML = data.html;
+        })
+        .catch(() => {
+            body.innerHTML = '<div class="text-center text-danger py-4">題目載入失敗，請稍後再試。</div>';
+        });
+}
 </script>
 {% endblock %}

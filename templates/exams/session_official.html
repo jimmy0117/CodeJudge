@@ -1,0 +1,641 @@
+{% load question_filters %}
+{% load static %}
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ exam.title }} - APCS 檢測</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+    background: #e9ecef;
+    font-family: "Microsoft JhengHei", "PMingLiU", -apple-system, sans-serif;
+}
+.d-none { display: none !important; }
+
+/* ── 共用：仿系統列（登入／注意事項／作答／結束 每個畫面都有） ─── */
+.exam-statusbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: #1a2733;
+    color: #cfd8e3;
+    font-size: 0.72rem;
+    padding: 3px 14px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 10;
+}
+.exam-statusbar .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2ecc71;
+    margin-right: 6px;
+}
+
+/* ── 階段 1／2：登入、注意事項 ─────────────────────────── */
+.gate-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    padding-bottom: 28px;
+}
+.gate-topbar {
+    background: #8fb8d8;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.gate-topbar .brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+    color: #2f7a3d;
+    letter-spacing: 1px;
+}
+.gate-topbar .title {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+.gate-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.login-fields {
+    line-height: 1.9;
+    font-size: 0.98rem;
+}
+.login-fields .field-row { display: flex; gap: 6px; }
+.login-fields .field-label { width: 6.5em; flex-shrink: 0; }
+.login-fields input[type="password"], .login-fields input[type="text"] {
+    border: 1px solid #6ea8d8;
+    padding: 2px 6px;
+    width: 160px;
+}
+.instructions-block { max-width: 620px; text-align: center; }
+.instructions-block .brand-big {
+    font-size: 2rem; font-weight: bold; color: #2f7a3d;
+}
+.instructions-block .brand-sub {
+    font-size: 0.85rem; color: #555; margin-bottom: 1rem;
+}
+.instructions-block h5 { margin: 0.75rem 0; }
+.instructions-block .warn-title { color: #c0392b; font-weight: 600; margin-bottom: .5rem; }
+.instructions-block ol {
+    text-align: left;
+    font-size: 0.85rem;
+    color: #333;
+    line-height: 1.7;
+}
+/* ── 階段 4：作答結束 ─────────────────────────────────── */
+.end-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    color: #333;
+    font-size: 1.1rem;
+    text-align: center;
+    line-height: 2;
+}
+
+/* ── 階段 3：作答畫面 ─────────────────────────────────── */
+.exam-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+.exam-head {
+    flex: 0 0 auto;
+    background: #fff;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.exam-head .qno {
+    color: #0d4f9e;
+    font-weight: bold;
+    font-size: 1.4rem;
+}
+.exam-head .meta {
+    color: #333;
+    font-size: 0.9rem;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.exam-head .meta .timer-text {
+    color: #c0392b;
+    font-weight: bold;
+}
+.exam-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    background: #fff;
+    padding: 28px 40px;
+}
+.exam-body .question-body {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+.exam-options-view {
+    max-width: 720px;
+    margin: 0 auto;
+}
+.exam-options-view .opt-row {
+    padding: 6px 10px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    font-size: 1.02rem;
+}
+.exam-options-view .opt-row.selected {
+    background: #eaf3ff;
+    color: #0d4f9e;
+    font-weight: 600;
+}
+.exam-controlbar {
+    flex: 0 0 auto;
+    background: #f1f3f5;
+    border-top: 1px solid #dee2e6;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.exam-controlbar .jump-select {
+    width: 110px;
+    flex: 0 0 auto;
+}
+.exam-controlbar .center-group {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+}
+.exam-controlbar .answer-radios {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+.exam-controlbar .answer-radios label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    margin: 0;
+}
+/* ── 交卷確認覆蓋層 ─────────────────────────────────── */
+#submitOverlay {
+    position: fixed;
+    inset: 0;
+    background: #f8f9fa;
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+#submitOverlay .qgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 10px 18px;
+    max-width: 720px;
+    margin-bottom: 1.5rem;
+}
+#submitOverlay .qgrid .qitem { font-size: 0.9rem; white-space: nowrap; }
+#submitOverlay .qgrid .qitem .status { color: #0d4f9e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ 階段 1：登入畫面 ══════════════════ -->
+<div class="gate-screen" id="stageLogin">
+    <div class="gate-topbar">
+        <span class="brand">APCS</span>
+        <span class="title">大學程式設計先修檢測</span>
+    </div>
+    <div class="gate-body">
+        <div class="login-fields">
+            <div class="field-row"><span class="field-label">檢測科目：</span><span>程式識讀</span></div>
+            <div class="field-row"><span class="field-label">題　　本：</span><span>{{ exam.title }}</span></div>
+            <div class="field-row"><span class="field-label">開始時間：</span><span id="loginStartTime">--:--</span></div>
+            <div class="field-row"><span class="field-label">檢測時長：</span><span>{{ exam.time_limit }} 分鐘</span></div>
+            <div class="mt-2"></div>
+            <div class="field-row"><span class="field-label">應測者姓名：</span><span>{{ user.get_full_name|default:user.username }}</span></div>
+            <div class="field-row"><span class="field-label">應測編號：</span><span>{{ user.pk|stringformat:"09d" }}</span></div>
+            <div class="field-row">
+                <span class="field-label">身分證號碼：</span>
+                <input type="password" id="idNumberInput" autocomplete="off" placeholder="">
+            </div>
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="loginConfirmBtn">資料確認無誤</button>
+            </div>
+        </div>
+    </div>
+    <div class="exam-statusbar">
+        <span><span class="dot"></span>隨身碟號碼:{{ session.pk|stringformat:"04x" }}c0　本機IP:127.0.0.1　版本:1.0.0　應測編號:{{ user.pk|stringformat:"09d" }}</span>
+        <span id="loginClock">現在時間：--</span>
+    </div>
+</div>
+
+<!-- ══════════════════ 階段 2：注意事項畫面 ══════════════════ -->
+<div class="gate-screen d-none" id="stageInstructions">
+    <div class="gate-body">
+        <div class="instructions-block">
+            <div class="brand-big">APCS <span style="font-size:1.2rem;">大學程式設計先修檢測</span></div>
+            <div class="brand-sub">Advanced Placement Computer Science</div>
+            <h5>程式識讀</h5>
+            <h5>題數：{{ exam.question_count }}題</h5>
+            <p class="warn-title">檢測注意事項</p>
+            <ol>
+                <li>按下本頁下方「開始檢測並開始計時」按鍵後，系統即開始計時。</li>
+                <li>檢測期間，如因病、因故（如廁等）需暫時離場時，須經監試人員同意，並在監試人員陪同准離場。離場應測者經治療或處理後，如檢測尚未結束，仍可入場，但不得請求延長時間或補考。</li>
+                <li>每人每部交提供一張計算紙，檢測結束後不可攜出，計算紙上請寫應測編號。</li>
+                <li>欲提早交卷者，請按下「結束作答，送出答案」按鍵，並舉手通知監試人員，待監試人員回收計算紙後方可離場。</li>
+                <li>檢測結束請留在座位上，等監試人員清點完試卷；由監試人員宣布離場才可離開。</li>
+                <li>請勿觸碰隨身碟，離場不要開機或關閉檢測系統。</li>
+            </ol>
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="startExamBtn">開始檢測並開始計時</button>
+            </div>
+        </div>
+    </div>
+    <div class="exam-statusbar">
+        <span><span class="dot"></span>隨身碟號碼:{{ session.pk|stringformat:"04x" }}c0　本機IP:127.0.0.1　版本:1.0.0　應測編號:{{ user.pk|stringformat:"09d" }}</span>
+        <span id="instrClock">現在時間：--</span>
+    </div>
+</div>
+
+<!-- ══════════════════ 階段 3：作答畫面 ══════════════════ -->
+<div class="exam-wrap d-none" id="stageExam">
+    <div class="exam-head">
+        <div class="qno" id="qnoLabel">第 1 題</div>
+        <div class="meta">
+            <span class="timer-text" id="timerDisplay">倒數計時中…</span>
+            <span>題本：{{ exam.title }}</span>
+        </div>
+    </div>
+
+    <div class="exam-body" id="examBody">
+        {% for eq in exam_questions %}
+        <div class="exam-question" id="question-{{ forloop.counter0 }}" data-order="{{ eq.order }}" {% if not forloop.first %}style="display:none;"{% endif %}>
+            <div class="question-body">{% format_question eq.question %}</div>
+            <div class="exam-options-view" data-question-id="{{ eq.question.pk }}">
+                {% for letter, text in eq.question.get_options %}
+                <div class="opt-row" data-letter="{{ letter }}">（{{ letter }}）{{ text }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="exam-controlbar">
+        <select class="form-select form-select-sm jump-select" id="jumpSelect">
+            {% for eq in exam_questions %}
+            <option value="{{ forloop.counter0 }}">第{{ eq.order }}題</option>
+            {% endfor %}
+        </select>
+
+        <div class="center-group">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="prevBtn">◀ 上一題</button>
+            <div class="answer-radios" id="answerRadios"></div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="nextBtn">下一題 ▶</button>
+        </div>
+
+        <button type="button" class="btn btn-danger btn-sm" id="openSubmitOverlay">
+            結束作答，送出答案
+        </button>
+    </div>
+
+    <div class="exam-statusbar" style="position: static;">
+        <span><span class="dot"></span>{{ user.username }}｜考卷代號：{{ exam.code }}</span>
+        <span id="statusClock">現在時間：--</span>
+    </div>
+</div>
+
+<!-- ══════════════════ 階段 4：作答結束畫面 ══════════════════ -->
+<div class="end-screen d-none" id="stageEnd">
+    <div>檢測結束。<br>請依監考人員指示離場。</div>
+</div>
+
+<!-- 隱藏：實際作答儲存用（沿用現有 AJAX 儲存機制） -->
+<div class="d-none" id="answerInputs">
+    {% for eq in exam_questions %}
+    {% for letter, text in eq.question.get_options %}
+    <input type="radio" class="exam-answer"
+           name="answer_{{ eq.question.pk }}"
+           id="hidden_q{{ eq.order }}_{{ letter }}"
+           value="{{ letter }}"
+           data-question-id="{{ eq.question.pk }}"
+           data-session-pk="{{ session.pk }}"
+           data-save-url="{% url 'exams:save_answer' session.pk %}"
+           data-nav-id="nav-{{ forloop.parentloop.counter0 }}">
+    {% endfor %}
+    <span id="nav-{{ forloop.counter0 }}" data-order="{{ eq.order }}"></span>
+    {% endfor %}
+</div>
+<span id="timer" class="d-none"></span>
+<form method="post" action="{% url 'exams:submit' session.pk %}" id="submitForm">{% csrf_token %}</form>
+
+<!-- 交卷確認覆蓋層 -->
+<div id="submitOverlay">
+    <div class="qgrid" id="submitGrid"></div>
+    <p class="text-center mb-1" id="unansweredText"></p>
+    <p class="text-center text-muted mb-1" id="overlayTimeLeft"></p>
+    <p class="text-center text-danger fw-semibold mb-4">繳交送出後將不得再作答，請確認是否結束作答。</p>
+    <div class="d-flex gap-3">
+        <button type="button" class="btn btn-outline-secondary" id="backToExamBtn">返回題目以再繼續作答</button>
+        <button type="button" class="btn btn-danger" id="confirmSubmitBtn">確定結束作答</button>
+    </div>
+</div>
+
+{% if exam.anti_cheat %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade" id="antiCheatModal" tabindex="-1"
+     data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger border-2">
+            <div class="modal-header bg-danger text-white py-2">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>切換視窗警告
+                </h5>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="fs-1 mb-3">⚠️</div>
+                <h5 class="fw-bold">系統偵測到您切換了視窗或分頁</h5>
+                <p class="text-muted mb-4">此行為已被記錄，請專注於考卷作答。</p>
+                <div class="alert alert-warning fw-semibold mb-3">
+                    本次警告：第 <span id="cheatCountDisplay" class="text-danger fs-5">0</span>
+                    次 / 共 <span id="cheatMaxDisplay" class="text-danger fs-5">3</span> 次
+                </div>
+                <p id="cheatFinalWarning" class="text-danger fw-bold d-none mt-2">
+                    ⛔ 警告已達上限，系統將於 3 秒後自動交卷…
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center" id="cheatModalFooter">
+                <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-return-left me-1"></i>我知道了，返回作答
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endif %}
+
+<script>
+let timeRemaining     = {{ time_remaining|default:1800 }};
+const sessionPk       = {{ session.pk }};
+const submitUrl       = "{% url 'exams:submit' session.pk %}";
+const antiCheat       = {{ exam.anti_cheat|yesno:"true,false" }};
+const recordCheatUrl  = "{% url 'exams:record_cheat' session.pk %}";
+const maxWarnings     = 3;
+const beginTimerUrl   = "{% url 'exams:begin_timer' session.pk %}";
+</script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+(function () {
+    // ── 通用時鐘（登入／注意事項／作答 三個階段共用格式） ──────
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function fmtNow() {
+        const now = new Date();
+        return `現在時間：${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    }
+    ['loginClock', 'instrClock', 'statusClock'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = fmtNow();
+    });
+    setInterval(() => {
+        ['loginClock', 'instrClock', 'statusClock'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = fmtNow();
+        });
+    }, 1000);
+
+    const loginStartTime = document.getElementById('loginStartTime');
+    if (loginStartTime) {
+        const now = new Date();
+        loginStartTime.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+
+    function getCookie(name) {
+        let val = null;
+        if (document.cookie) {
+            document.cookie.split(';').forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + '=')) val = decodeURIComponent(c.slice(name.length + 1));
+            });
+        }
+        return val;
+    }
+
+    // ── 階段切換 ─────────────────────────────────────────────
+    const stageLogin        = document.getElementById('stageLogin');
+    const stageInstructions = document.getElementById('stageInstructions');
+    const stageExam         = document.getElementById('stageExam');
+    const stageEnd          = document.getElementById('stageEnd');
+
+    document.getElementById('loginConfirmBtn').addEventListener('click', function () {
+        stageLogin.classList.add('d-none');
+        stageInstructions.classList.remove('d-none');
+    });
+
+    document.getElementById('startExamBtn').addEventListener('click', function () {
+        const btn = this;
+        btn.disabled = true;
+        fetch(beginTimerUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (typeof data.time_remaining === 'number') {
+                    timeRemaining = data.time_remaining;
+                }
+            })
+            .catch(() => { /* 若重設失敗，仍使用頁面載入時的原始剩餘時間 */ })
+            .finally(() => {
+                stageInstructions.classList.add('d-none');
+                stageExam.classList.remove('d-none');
+                startExamScripts();
+            });
+    });
+
+    // ── 進入作答畫面後才載入計時／自動儲存／防作弊腳本 ──────────
+    function startExamScripts() {
+        const s = document.createElement('script');
+        s.src = "{% static 'js/exam_timer.js' %}";
+        s.onload = initQuestionNav;
+        document.body.appendChild(s);
+    }
+
+    // ── 單題單頁瀏覽邏輯 ─────────────────────────────────────
+    function initQuestionNav() {
+        hljs.highlightAll();
+
+        const questions = [...document.querySelectorAll('.exam-question')];
+        const total = questions.length;
+        let current = 0;
+
+        const qnoLabel   = document.getElementById('qnoLabel');
+        const jumpSelect = document.getElementById('jumpSelect');
+        const prevBtn    = document.getElementById('prevBtn');
+        const nextBtn    = document.getElementById('nextBtn');
+        const answerRadiosEl = document.getElementById('answerRadios');
+
+        function optionLetters(idx) {
+            const el = questions[idx].querySelector('.exam-options-view');
+            return [...el.querySelectorAll('.opt-row')].map(r => r.dataset.letter);
+        }
+
+        function currentAnswerFor(idx) {
+            const qid = questions[idx].querySelector('.exam-options-view').dataset.questionId;
+            const checked = document.querySelector(`.exam-answer[data-question-id="${qid}"]:checked`);
+            return checked ? checked.value : null;
+        }
+
+        function renderOptionHighlight(idx) {
+            const ans = currentAnswerFor(idx);
+            questions[idx].querySelectorAll('.opt-row').forEach(row => {
+                row.classList.toggle('selected', row.dataset.letter === ans);
+            });
+        }
+
+        function renderRadios(idx) {
+            const qid = questions[idx].querySelector('.exam-options-view').dataset.questionId;
+            const letters = optionLetters(idx);
+            const ans = currentAnswerFor(idx);
+            answerRadiosEl.innerHTML = letters.map(letter => `
+                <label>
+                    <input type="radio" name="quickpick" value="${letter}" ${ans === letter ? 'checked' : ''}>
+                    ${letter}
+                </label>
+            `).join('');
+            answerRadiosEl.querySelectorAll('input[name="quickpick"]').forEach(r => {
+                r.addEventListener('change', function () {
+                    const hidden = document.querySelector(
+                        `.exam-answer[data-question-id="${qid}"][value="${this.value}"]`
+                    );
+                    if (hidden) {
+                        hidden.checked = true;
+                        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    renderOptionHighlight(idx);
+                });
+            });
+        }
+
+        function showQuestion(idx) {
+            if (idx < 0 || idx >= total) return;
+            questions[current].style.display = 'none';
+            current = idx;
+            questions[current].style.display = '';
+            qnoLabel.textContent = '第 ' + questions[current].dataset.order + ' 題';
+            jumpSelect.value = String(current);
+            prevBtn.disabled = current === 0;
+            nextBtn.disabled = current === total - 1;
+            renderOptionHighlight(current);
+            renderRadios(current);
+            document.getElementById('examBody').scrollTop = 0;
+        }
+
+        jumpSelect.addEventListener('change', () => showQuestion(parseInt(jumpSelect.value, 10)));
+        prevBtn.addEventListener('click', () => showQuestion(current - 1));
+        nextBtn.addEventListener('click', () => showQuestion(current + 1));
+
+        showQuestion(0);
+
+        // ── 交卷確認覆蓋層 ──────────────────────────────────────
+        const overlay = document.getElementById('submitOverlay');
+        const openBtn = document.getElementById('openSubmitOverlay');
+        const backBtn = document.getElementById('backToExamBtn');
+        const confirmBtn = document.getElementById('confirmSubmitBtn');
+        const submitGrid = document.getElementById('submitGrid');
+        const unansweredText = document.getElementById('unansweredText');
+        const overlayTimeLeft = document.getElementById('overlayTimeLeft');
+
+        let overlayTimerInterval = null;
+
+        function updateOverlayTime() {
+            const raw = document.getElementById('timer').textContent.split(':');
+            const totalMinutes = parseInt(raw[0], 10) || 0;
+            const secs = parseInt(raw[1], 10) || 0;
+            const hrs = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            overlayTimeLeft.textContent = `距離結束時間尚有${hrs}小時${mins}分${secs}秒`;
+        }
+
+        function buildSubmitGrid() {
+            let unanswered = 0;
+            submitGrid.innerHTML = questions.map((q) => {
+                const qid = q.querySelector('.exam-options-view').dataset.questionId;
+                const answered = !!document.querySelector(`.exam-answer[data-question-id="${qid}"]:checked`);
+                if (!answered) unanswered++;
+                return `<div class="qitem">Q${q.dataset.order}：<span class="status">${answered ? 'V' : ''}</span></div>`;
+            }).join('');
+            unansweredText.textContent = unanswered > 0 ? `尚有${unanswered}題未作答` : '所有題目皆已作答';
+            updateOverlayTime();
+        }
+
+        function closeOverlayTimer() {
+            if (overlayTimerInterval) {
+                clearInterval(overlayTimerInterval);
+                overlayTimerInterval = null;
+            }
+        }
+
+        openBtn.addEventListener('click', () => {
+            buildSubmitGrid();
+            overlay.style.display = 'flex';
+            closeOverlayTimer();
+            // 交卷確認畫面開著時，倒數仍要持續跳動，直到學生按下「確定結束作答」
+            overlayTimerInterval = setInterval(updateOverlayTime, 1000);
+        });
+        backBtn.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            closeOverlayTimer();
+        });
+        confirmBtn.addEventListener('click', () => {
+            closeOverlayTimer();
+            overlay.style.display = 'none';
+            stageExam.classList.add('d-none');
+            stageEnd.classList.remove('d-none');
+            setTimeout(() => {
+                document.getElementById('submitForm').submit();
+            }, 1600);
+        });
+
+        // ── 倒數顯示（沿用 exam_timer.js 對 #timer 的 MM:SS 更新） ──
+        function reformatTimer() {
+            const raw = document.getElementById('timer').textContent;
+            const parts = raw.split(':');
+            if (parts.length === 2) {
+                const m = parseInt(parts[0], 10);
+                const s = parseInt(parts[1], 10);
+                document.getElementById('timerDisplay').textContent = `距離檢測時間結束尚有${m}分${s}秒`;
+            }
+        }
+        setInterval(reformatTimer, 1000);
+        reformatTimer();
+    }
+})();
+</script>
+</body>
+</html>
