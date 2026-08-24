@@ -9,6 +9,7 @@ from django.db.models import Q, F
 from .models import Exam, ExamQuestion, ExamSession, ExamAnswer
 from .forms import ExamForm, ExamJoinForm
 from questions.models import Question, Category
+from config.csv_utils import csv_safe
 
 
 def teacher_required(view_func):
@@ -66,7 +67,10 @@ def exam_edit(request, pk):
 
 @teacher_required
 def exam_detail(request, pk):
-    exam = get_object_or_404(Exam, pk=pk)
+    # 跟同檔案其他 view（exam_edit / exam_update_scores / exam_results 等）一致，
+    # 一定要限定 created_by=request.user，否則任何教師只要知道別人考卷的 pk
+    # 就能看到完整題目與配分（IDOR）。
+    exam = get_object_or_404(Exam, pk=pk, created_by=request.user)
     exam_questions = exam.exam_questions.select_related('question', 'question__category').all()
     existing_ids = exam_questions.values_list('question_id', flat=True)
     all_questions = Question.objects.filter(is_active=True).exclude(
@@ -206,6 +210,22 @@ def exam_start(request, pk):
         messages.info(request, '您已完成此考卷。')
         return redirect('exams:session_result', pk=existing.pk)
 
+    # 時間窗檢查：跟 exam_join 保持一致，避免有人繞過「輸入考卷代號」那一步、
+    # 直接用考卷 pk 存取 /exams/<pk>/start/，在開放時間之外開始作答。
+    # 只擋「還沒開始作答」的情況——已經在作答中的 session 不因為過了 end_time
+    # 而被鎖住，避免正在寫的學生卡在交卷前一刻。
+    already_in_progress = ExamSession.objects.filter(
+        exam=exam, user=request.user, is_submitted=False
+    ).exists()
+    if not already_in_progress:
+        now = timezone.now()
+        if exam.start_time and now < exam.start_time:
+            messages.error(request, f'考卷尚未開放，開始時間：{exam.start_time}')
+            return redirect('exams:list')
+        if exam.end_time and now > exam.end_time:
+            messages.error(request, '考卷已截止。')
+            return redirect('exams:list')
+
     # Get or create session
     session, created = ExamSession.objects.get_or_create(exam=exam, user=request.user)
     if created:
@@ -268,6 +288,12 @@ def record_cheat(request, pk):
     return JsonResponse({'status': 'recorded', 'count': session.cheat_count})
 
 
+# selected_answer/confidence 欄位在 DB 只有 1 / 10 個字元長，這裡先擋掉不合法的值，
+# 避免未經驗證的 POST 資料直接寫進 model 造成 PostgreSQL DataError（未攔截的 500）。
+_VALID_ANSWERS = {'', *dict(Question.ANSWER_CHOICES).keys()}
+_VALID_CONFIDENCE = {'', 'sure', 'unsure', 'guess'}
+
+
 @login_required
 def exam_save_answer(request, pk):
     if request.method == 'POST':
@@ -277,6 +303,10 @@ def exam_save_answer(request, pk):
         question_id = request.POST.get('question_id')
         selected = request.POST.get('answer', '')
         confidence = request.POST.get('confidence', '')
+        if selected not in _VALID_ANSWERS:
+            return JsonResponse({'error': '答案格式不正確'}, status=400)
+        if confidence not in _VALID_CONFIDENCE:
+            confidence = ''
         try:
             answer = ExamAnswer.objects.get(exam_session=session, question_id=question_id)
             answer.selected_answer = selected
@@ -350,9 +380,11 @@ def export_results_csv(request, pk):
     total = exam.total_score()
     for s in sessions:
         pct = round(s.score / total * 100, 1) if total else 0
+        # 帳號、姓名是使用者自己填的，未經處理直接寫進 CSV 會有公式注入風險
+        # （例如姓名設成 =HYPERLINK(...)），用 csv_safe() 中和開頭的 =/+/-/@。
         row = [
-            s.user.username,
-            s.user.get_full_name() or s.user.username,
+            csv_safe(s.user.username),
+            csv_safe(s.user.get_full_name() or s.user.username),
             s.score,
             total,
             f'{pct}%',

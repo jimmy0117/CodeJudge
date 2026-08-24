@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from .models import Question, Category, Tag
 from .forms import QuestionForm, CategoryForm, QuestionFilterForm
+from exams.models import ExamQuestion
 
 
 def teacher_required(view_func):
@@ -21,6 +22,7 @@ def teacher_required(view_func):
     return wrapper
 
 
+@login_required
 def question_list(request):
     questions = Question.objects.filter(is_active=True).select_related('category')
     form = QuestionFilterForm(request.GET)
@@ -94,11 +96,30 @@ def question_edit(request, pk):
 @teacher_required
 def question_delete(request, pk):
     question = get_object_or_404(Question, pk=pk)
+    # ExamAnswer.question 是 on_delete=CASCADE：題目如果已經被用在「已經有人
+    # 交卷」的考卷裡，真的刪除會連帶把那些已經改完分的作答明細一起刪掉，但
+    # ExamSession.score 不會跟著變，分數跟明細就對不起來，而且無法復原。
+    # 這種情況改成軟刪除（is_active=False，題目本來就有這個欄位在用），題目
+    # 一樣不會再出現在練習/新考卷裡，但歷史成績明細保持完整。
+    used_in_graded_exam = ExamQuestion.objects.filter(
+        question=question, exam__sessions__is_submitted=True
+    ).exists()
+
     if request.method == 'POST':
         title = question.title
-        question.delete()           # 真實刪除（CASCADE 聯動刪除作答紀錄等）
-        messages.success(request, f'題目「{title}」已永久刪除。')
+        if used_in_graded_exam:
+            question.is_active = False
+            question.save(update_fields=['is_active'])
+            messages.success(
+                request,
+                f'題目「{title}」已經被用在有人交卷的考卷裡，為了不破壞已經送出的'
+                f'成績明細，改成停用（不會再出現在練習或新考卷中），沒有真的刪除資料。'
+            )
+        else:
+            question.delete()           # 真實刪除（CASCADE 聯動刪除練習紀錄等）
+            messages.success(request, f'題目「{title}」已永久刪除。')
         return redirect('questions:list')
+
     # 顯示確認頁前先計算關聯資料數
     context = {
         'question': question,
@@ -107,6 +128,7 @@ def question_delete(request, pk):
         'favorite_count':  question.favoritequestion_set.count(),
         'note_count':      question.questionnote_set.count(),
         'exam_count':      question.in_exams.count(),
+        'used_in_graded_exam': used_in_graded_exam,
     }
     return render(request, 'questions/confirm_delete.html', context)
 
@@ -296,6 +318,7 @@ def download_sample_csv(request):
     return response
 
 
+@login_required
 def category_list(request):
     categories = Category.objects.all()
     return render(request, 'questions/category_list.html', {'categories': categories})

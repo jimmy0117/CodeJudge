@@ -100,8 +100,13 @@ def practice_history(request):
 
 @login_required
 def site_settings_view(request):
-    """管理員平台設定頁面（僅限管理員）。"""
-    if not hasattr(request.user, 'profile') or not request.user.profile.is_teacher_or_admin():
+    """管理員平台設定頁面（僅限管理員）。
+
+    注意：這裡不能用 is_teacher_or_admin()——那個判斷連教師也會放行，
+    但這個頁面能改全站的 Google OAuth Client ID/Secret、網站名稱、
+    顏色主題等，只有 admin 角色可以進來。
+    """
+    if not hasattr(request.user, 'profile') or not request.user.profile.is_admin():
         messages.error(request, '此頁面僅限管理員使用。')
         return redirect('dashboard:index')
 

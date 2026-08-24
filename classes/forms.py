@@ -3,6 +3,20 @@ from .models import ClassRoom, ClassExamAssignment
 from exams.models import Exam
 
 
+class BatchCreateStudentsForm(forms.Form):
+    students = forms.CharField(
+        label='學生名單',
+        help_text=(
+            '一行一位學生，格式：使用者名稱,姓名（姓名可省略）。'
+            '例如：s10501,王小明。使用者名稱若已存在，會直接把該帳號加入本班級，不會覆蓋密碼。'
+        ),
+        widget=forms.Textarea(attrs={
+            'rows': 10,
+            'placeholder': 's10501,王小明\ns10502,李小華\ns10503',
+        }),
+    )
+
+
 class ClassRoomForm(forms.ModelForm):
     class Meta:
         model = ClassRoom

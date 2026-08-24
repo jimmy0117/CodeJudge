@@ -1,11 +1,20 @@
 from pathlib import Path
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-change-me-in-production')
 
 DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
+
+# 正式環境安全防呆：DEBUG=False 卻還在用預設的 SECRET_KEY，代表 .env 沒有正確設定，
+# 寧可啟動失敗也不要讓平台帶著不安全的預設值上線。詳見 README「正式部署前檢查清單」。
+if not DEBUG and SECRET_KEY == 'django-insecure-change-me-in-production':
+    raise ImproperlyConfigured(
+        'DJANGO_DEBUG=False 但 DJANGO_SECRET_KEY 還是預設值，'
+        '請在 .env 設定一組隨機的 DJANGO_SECRET_KEY 後再啟動。'
+    )
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
@@ -131,3 +140,35 @@ SOCIAL_AUTH_STRATEGY             = 'accounts.social_strategy.DBDjangoStrategy'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL   = '/'
 SOCIAL_AUTH_NEW_USER_REDIRECT_URL = '/'
 SOCIAL_AUTH_REDIRECT_IS_HTTPS    = False   # 開發環境使用 HTTP
+
+# ── Email（忘記密碼等系統信件）────────────────────────────────────────────────
+# 預設用 console backend：信件內容印到 web 容器 log，開發環境不需要架設 SMTP。
+# 正式環境要真的寄出信件，在 .env 設定 EMAIL_BACKEND 為
+# django.core.mail.backends.smtp.EmailBackend，並填好下方 SMTP 相關變數。
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+DEFAULT_FROM_EMAIL = config(
+    'DEFAULT_FROM_EMAIL', default='APCS 練習平台 <noreply@apcs-practice.local>'
+)
+PASSWORD_RESET_TIMEOUT = config('PASSWORD_RESET_TIMEOUT', default=3600, cast=int)  # 秒，預設 1 小時
+
+# ── HTTPS 安全性設定（正式部署用）───────────────────────────────────────────────
+# 目前 docker-compose 用 `runserver` 直接對外，8443 只是 port 號碼，並不是真的 TLS。
+# 正式上線時要在前面加一層會做 TLS termination 的反向代理（Nginx / Caddy 等，
+# 見 README「未來擴充方向」），確認 HTTPS 真的生效後，再把 DJANGO_USE_HTTPS 設為
+# True——這裡才會強制 HTTPS 轉址、cookie 加上 Secure 旗標。沒有 TLS 的情況下打開
+# 這個開關，網站會直接進入無窮轉址迴圈，因此預設關閉。
+USE_HTTPS = config('DJANGO_USE_HTTPS', default=False, cast=bool)
+if USE_HTTPS:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

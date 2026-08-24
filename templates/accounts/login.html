@@ -21,6 +21,9 @@
                             </button>
                         </div>
                     </form>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'accounts:password_reset' %}" class="small text-muted">忘記密碼？</a>
+                    </div>
 
                     {% if google_login_available %}
                     <!-- 分隔線 -->
