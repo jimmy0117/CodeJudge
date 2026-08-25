@@ -23,6 +23,9 @@ class UserProfile(models.Model):
     def is_teacher_or_admin(self):
         return self.role in ['teacher', 'admin']
 
+    def is_admin(self):
+        return self.role == 'admin'
+
 
 class SiteSettings(models.Model):
     """平台全域設定（Singleton，永遠只有 pk=1 那一筆）。"""

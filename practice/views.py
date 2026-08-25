@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Q
 from questions.models import Question
 from .models import PracticeRecord, WrongQuestion, FavoriteQuestion, QuestionNote
@@ -96,6 +97,19 @@ def practice_question(request):
                 'index': index + 1,
                 'total': len(queue),
             })
+
+        # selected_answer/confidence 在 DB 只有 1 / 10 個字元長，這裡先擋掉不合法
+        # 的值，避免未經驗證的 POST 資料直接寫進 model 造成 DataError（未攔截的 500）。
+        valid_answers = dict(Question.ANSWER_CHOICES).keys()
+        if selected not in valid_answers:
+            messages.error(request, '答案格式不正確，請重新作答。')
+            return render(request, 'practice/question.html', {
+                'question': question,
+                'index': index + 1,
+                'total': len(queue),
+            })
+        if confidence not in ('', 'sure', 'unsure', 'guess'):
+            confidence = ''
 
         is_correct = (selected == question.correct_answer)
 
@@ -218,7 +232,16 @@ def note_edit(request, pk):
                 defaults={'content': content}
             )
             messages.success(request, '筆記已儲存。')
-            return redirect(request.META.get('HTTP_REFERER', 'practice:start'))
+            # HTTP_REFERER 是使用者端可任意偽造的 header，直接拿來 redirect
+            # 會是開放重新導向（open redirect）：惡意連結可以在存完筆記後
+            # 把使用者導去外部網站。這裡驗證 referer 是不是同一個網站，
+            # 不是的話一律退回安全的預設頁面。
+            referer = request.META.get('HTTP_REFERER', '')
+            if referer and url_has_allowed_host_and_scheme(
+                referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+            ):
+                return redirect(referer)
+            return redirect('practice:start')
     return redirect('practice:start')
 
 

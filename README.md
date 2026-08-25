@@ -14,7 +14,7 @@
 | 題庫管理 | 新增、編輯、刪除（單題 + 批量）題目；依分類、難度、年份、標籤篩選；CSV 批量匯入；題目程式碼自動語法高亮 |
 | 題目練習 | 自由練習、隨機練習、錯題複習、收藏練習、弱點練習五種模式 |
 | 考卷系統 | 建立考卷並自動產生 6 碼代號；批次搜尋/篩選加入題目、每題分數可自訂；題目預覽；支援倒數計時、防作弊視窗偵測、自動批改；可選擇啟用「模擬 APCS 正式考試介面」（詳見下方說明） |
-| 班級管理 | 建立班級並自動產生班級代號，指派考卷給班級 |
+| 班級管理 | 建立班級並自動產生班級代號，指派考卷給班級；教師可批次貼上學生名單一次建立多個學生帳號並自動加入班級 |
 | 錯題追蹤 | 自動記錄錯題，搭配間隔複習排程（1 / 3 / 7 天） |
 | 學習統計 | 個人正確率、分類弱點分析、練習紀錄 |
 | 班級統計 | 考卷完成率、班級平均分、每題答對率、成績匯出 CSV |
@@ -288,8 +288,10 @@ GOOGLE_OAUTH2_CLIENT_SECRET=你的Client_Secret
 /                            首頁
 /accounts/login/             登入
 /accounts/logout/            登出
-/accounts/register/          註冊
+/accounts/register/          註冊（一律建立學生帳號，教師/管理員身分由管理員在 Django Admin 指派）
 /accounts/profile/           個人資料
+/accounts/change-password/   修改密碼（登入後）
+/accounts/password-reset/    忘記密碼（寄送重設連結，開發環境信件印在 web 容器 log）
 
 /questions/                  題目列表
 /questions/create/           新增題目（教師/管理員）
@@ -314,6 +316,9 @@ GOOGLE_OAUTH2_CLIENT_SECRET=你的Client_Secret
 /classes/create/             建立班級
 /classes/join/               輸入班級代號
 /classes/<id>/               班級詳情
+/classes/<id>/students/                      班級學生名單（教師/管理員）
+/classes/<id>/students/batch-create/         批次建立學生帳號（教師/管理員）
+/classes/<id>/students/batch-create/export/  匯出批次建立結果 CSV（教師/管理員）
 
 /dashboard/                  個人學習統計
 /dashboard/weakness/         弱點分析
@@ -338,6 +343,25 @@ docker exec codejudge-web-1 python manage.py collectstatic --noinput
 ```
 
 **`.env` 不應提交至 git**（已加入 `.gitignore`），請各自在本機建立。
+
+---
+
+## 正式部署前檢查清單
+
+`docker-compose.yml` 目前的設定是給**開發環境**用的（`runserver` 直接對外、無 TLS、`.env` 全部是方便本機測試的預設值）。
+真的要對外提供服務前，請逐項確認：
+
+| 項目 | 怎麼做 | 為什麼 |
+|---|---|---|
+| 關閉 Debug 模式 | `.env` 設定 `DJANGO_DEBUG=False` | `DEBUG=True` 時任何未攔截的例外都會把完整的原始碼、環境變數、SQL 查詢等內部資訊顯示給訪客看 |
+| 換掉 SECRET_KEY | `.env` 的 `DJANGO_SECRET_KEY` 改成隨機字串（見上方「建立環境設定檔」指令） | 用來簽章 session/token，用預設值等於誰都能偽造登入狀態；`DEBUG=False` 又沒改的話，`config/settings.py` 會直接拒絕啟動 |
+| 換掉資料庫密碼 | `.env` 的 `POSTGRES_PASSWORD` 不要用預設的 `apcs_password` | 預設密碼是公開在原始碼裡的 |
+| 換掉 pgAdmin 密碼、避免對外開放 | `.env` 的 `PGADMIN_DEFAULT_PASSWORD`，並考慮拿掉 `docker-compose.yml` 裡 `pgadmin` 服務的對外 port 或加防火牆限制來源 IP | pgAdmin 能直接操作整個資料庫，不該讓所有人都連得到 |
+| 設定正確的 ALLOWED_HOSTS | `.env` 的 `DJANGO_ALLOWED_HOSTS` 改成正式網域，不要留 `localhost` | 避免 Host header 相關的偽造攻擊 |
+| 加上真正的 HTTPS | 在前面架 Nginx / Caddy 之類的反向代理做 TLS termination（`runserver` 本身不支援 HTTPS），確認網站可以用 `https://` 正常打開後，再把 `.env` 的 `DJANGO_USE_HTTPS=True` 打開 | 打開 `DJANGO_USE_HTTPS` 會啟用 HSTS、強制轉址 HTTPS、cookie 加 `Secure` 旗標；**沒有 TLS 就打開會造成無窮轉址**，順序不能顛倒 |
+| 設定真的會寄信的 Email 後端 | `.env` 設定 `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` 及對應 SMTP 帳密（見上方「Email」設定） | 預設的 console backend 只會把忘記密碼信印在 `web` 容器的 log 裡，使用者實際上收不到信 |
+| 不要用開發伺服器 | 正式環境建議改用 `gunicorn` + Nginx，而不是 `docker-compose.yml` 目前的 `python manage.py runserver` | `runserver` 是 Django 官方文件明確標註「僅供開發使用」的伺服器，沒有針對併發流量做優化，也沒有內建靜態檔案快取策略 |
+| 定期備份資料庫 | 備份 `postgres_data` 這個 Docker volume（或改用外部代管的 PostgreSQL） | `docker-compose down -v` 或誤刪 volume 會讓所有資料（帳號、題目、成績）永久遺失 |
 
 ---
 

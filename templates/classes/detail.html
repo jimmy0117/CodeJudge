@@ -20,6 +20,9 @@
             <a href="{% url 'classes:results' classroom.pk %}" class="btn btn-outline-primary">
                 <i class="bi bi-bar-chart me-1"></i>成績統計
             </a>
+            <a href="{% url 'classes:delete' classroom.pk %}" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>刪除班級
+            </a>
         </div>
         {% elif is_enrolled %}
         <a href="{% url 'classes:leave' classroom.pk %}" class="btn btn-outline-danger">

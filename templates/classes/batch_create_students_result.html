@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}批次建立結果 - {{ classroom.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">批次建立結果 - {{ classroom.name }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'classes:batch_create_students_csv' classroom.pk %}" class="btn btn-primary">
+                <i class="bi bi-download me-1"></i>下載 CSV
+            </a>
+            <a href="{% url 'classes:students' classroom.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>返回學生名單
+            </a>
+        </div>
+    </div>
+
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        密碼只會顯示這一次（重新整理此頁不會消失，但離開後就看不到了），請盡快下載 CSV 或截圖後分發給學生，
+        並提醒學生登入後盡快自行修改密碼。
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>使用者名稱</th>
+                        <th>姓名</th>
+                        <th>密碼</th>
+                        <th>狀態</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in results %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ r.username }}</td>
+                        <td>{{ r.name|default:'-' }}</td>
+                        <td>
+                            {% if r.password %}
+                                <code>{{ r.password }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.status == 'created' %}
+                                <span class="badge bg-success">新建立</span>
+                            {% elif r.status == 'existing' %}
+                                <span class="badge bg-secondary">已存在</span>
+                            {% else %}
+                                <span class="badge bg-danger">格式錯誤</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ r.note }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

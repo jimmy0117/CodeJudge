@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}刪除班級 - APCS 練習平台{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>確認刪除班級</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <p class="lead mb-1">確定要刪除班級「{{ classroom.name }}」嗎？</p>
+                    <p class="text-danger small">
+                        這個動作無法復原，班級的學生名單（共 {{ classroom.student_count }} 位）
+                        與所有指派考卷紀錄都會一併刪除，但學生本身的帳號、作答紀錄與成績不會被刪除。
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center mt-4">
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i>確認刪除
+                            </button>
+                        </form>
+                        <a href="{% url 'classes:detail' classroom.pk %}" class="btn btn-outline-secondary">取消</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

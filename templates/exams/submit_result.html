@@ -47,7 +47,9 @@
                                     {% else %}
                                     <small class="text-muted">未作答</small>
                                     {% endif %}
+                                    {% if session.exam.show_explanation %}
                                     <small class="text-success">正確答案：<strong>{{ answer.question.correct_answer }}</strong></small>
+                                    {% endif %}
                                 </div>
                                 {% if session.exam.show_explanation %}
                                     {% if answer.question.explanation %}

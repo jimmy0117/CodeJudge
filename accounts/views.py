@@ -3,6 +3,7 @@ from django.contrib.auth import login, logout, authenticate, update_session_auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib import messages
+from django.utils.http import url_has_allowed_host_and_scheme
 from .forms import RegisterForm, ProfileUpdateForm
 
 
@@ -13,7 +14,11 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            # 專案同時設定了 GoogleOAuth2 + ModelBackend 兩個 AUTHENTICATION_BACKENDS，
+            # login() 在有多個 backend 時必須明確指定要用哪一個，否則會丟出
+            # ValueError 導致註冊送出後 500（帳號其實已建立，只是沒登入成功）。
+            # 這裡走的是帳密註冊，固定用 ModelBackend。
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             messages.success(request, f'歡迎加入，{user.username}！帳號已成功建立。')
             return redirect('home')
     else:
@@ -33,8 +38,16 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'歡迎回來，{username}！')
-                next_url = request.GET.get('next', 'home')
-                return redirect(next_url)
+                # ?next= 是使用者端可以任意帶入的參數，直接 redirect 會是開放
+                # 重新導向：攻擊者可以發「這是平台真實的登入連結」，帳密登入
+                # 也真的成功，但登入後被導去外部的釣魚頁。這裡驗證 next 是不是
+                # 同一個網站，不是的話一律退回首頁。
+                next_url = request.GET.get('next', '')
+                if next_url and url_has_allowed_host_and_scheme(
+                    next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+                ):
+                    return redirect(next_url)
+                return redirect('home')
         else:
             messages.error(request, '使用者名稱或密碼錯誤，請重試。')
     else:

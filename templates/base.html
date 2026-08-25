@@ -91,6 +91,7 @@
                             <li><h6 class="dropdown-header">班級管理</h6></li>
                             <li><a class="dropdown-item" href="{% url 'classes:list' %}">我的班級</a></li>
                             <li><a class="dropdown-item" href="{% url 'classes:create' %}">建立班級</a></li>
+                            {% if user.profile.is_admin %}
                             <li><hr class="dropdown-divider"></li>
                             <li><h6 class="dropdown-header">系統</h6></li>
                             <li>
@@ -98,6 +99,7 @@
                                     <i class="bi bi-gear me-2"></i>平台設定
                                 </a>
                             </li>
+                            {% endif %}
                         </ul>
                     </li>
                     {% endif %}
